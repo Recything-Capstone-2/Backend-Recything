@@ -65,7 +65,7 @@ jobs:
               sudo docker pull $IMAGE_URI
 
               # Run the new container
-              sudo docker run -d --name my-container -p 80:8080 $IMAGE_URI
+              sudo docker run -d --name my-container -p 8080:8080 $IMAGE_URI
             EOF
 
         - name: Clean up PEM file
