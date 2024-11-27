@@ -15,9 +15,7 @@ func main() {
 	loadEnv()
 
 	// Inisialisasi database
-	if err := config.InitDB(); err != nil {
-		log.Fatalf("Error initializing database: %v", err)
-	}
+	config.InitDB()
 
 	// Inisialisasi Echo
 	e := echo.New()
