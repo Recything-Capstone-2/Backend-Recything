@@ -1,13 +1,16 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
-	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id_user"`
-	Nama      string    `gorm:"type:varchar(255)"json:"nama"`
-	Username  string    `gorm:"type:varchar(255);unique" json:"username"`
-	Password  string    `gorm:"type:varchar(255)" json:"password"`
-	Email     string    `gorm:"type:varchar(255);unique;not null"`
-	CreatedAt time.Time `gorm:"type:datetime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"type:datetime" json:"updated_at"`
+	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id_user"`
+	NamaLengkap  string    `gorm:"type:varchar(255)" json:"nama_lengkap"`
+	TanggalLahir time.Time `gorm:"type:datetime" json:"tanggal_lahir"`
+	NoTelepon    string    `gorm:"type:varchar(15)" json:"no_telepon" validate:"regexp"`
+	Password     string    `gorm:"type:varchar(255)" json:"password"`
+	Email        string    `gorm:"type:varchar(255);unique;not null" json:"email"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }

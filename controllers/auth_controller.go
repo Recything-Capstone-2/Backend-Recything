@@ -16,11 +16,12 @@ import (
 
 // Struct untuk response login
 type LoginResponseData struct {
-	IDUser   int    `json:"id_user"`
-	Nama     string `json:"nama"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Token    string `json:"token"`
+	IDUser       uint   `json:"id_user"`
+	NamaLengkap  string `json:"nama_lengkap"`
+	TanggalLahir string `json:"tanggal_lahir"`
+	NoTelepon    string `json:"no_telepon"`
+	Email        string `json:"email"`
+	Token        string `json:"token"`
 }
 
 // Struct untuk validasi input login
@@ -31,19 +32,21 @@ type LoginInput struct {
 
 // Struct untuk validasi input registrasi
 type RegisterInput struct {
-	Name     string `json:"name" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required,min=6"`
+	NamaLengkap  string `json:"nama_lengkap" validate:"required"`
+	Email        string `json:"email" validate:"required,email"`
+	Password     string `json:"password" validate:"required,min=6"`
+	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
+	NoTelepon    string `json:"no_telepon" validate:"required"`
 }
 
 // Struct untuk JWT Claims
 type jwtCustomClaims struct {
 	Name   string `json:"name"`
-	UserID int    `json:"userID"`
+	UserID uint   `json:"userID"`
 	jwt.RegisteredClaims
 }
 
+// LoginHandler menangani proses login
 // LoginHandler menangani proses login
 func LoginHandler(c echo.Context) error {
 	var input LoginInput
@@ -74,7 +77,7 @@ func LoginHandler(c echo.Context) error {
 	}
 
 	// Generate token JWT
-	token, err := GenerateJWT(int(user.ID), user.Nama)
+	token, err := GenerateJWT(user.ID, user.NamaLengkap)
 	if err != nil {
 		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
 		return c.JSON(http.StatusInternalServerError, response)
@@ -82,11 +85,12 @@ func LoginHandler(c echo.Context) error {
 
 	// Response data
 	data := LoginResponseData{
-		IDUser:   int(user.ID),
-		Nama:     user.Nama,
-		Username: user.Username,
-		Email:    user.Email,
-		Token:    token,
+		IDUser:       user.ID,
+		NamaLengkap:  user.NamaLengkap,
+		Email:        user.Email,
+		NoTelepon:    user.NoTelepon,                         // Menambahkan NoTelepon di response login
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"), // Menyertakan TanggalLahir jika perlu
+		Token:        token,
 	}
 
 	response := helper.APIResponse("Login successful", http.StatusOK, "success", data)
@@ -110,11 +114,21 @@ func RegisterHandler(c echo.Context) error {
 
 	// Hash password
 	hash, _ := HashPassword(input.Password)
+
+	// Parse TanggalLahir ke time.Time
+	tanggalLahir, err := time.Parse("2006-01-02", input.TanggalLahir)
+	if err != nil {
+		response := helper.APIResponse("Invalid birth date format", http.StatusBadRequest, "error", nil)
+		return c.JSON(http.StatusBadRequest, response)
+	}
+
+	// Membuat user baru
 	user := models.User{
-		Nama:     input.Name,
-		Email:    input.Email,
-		Username: input.Username,
-		Password: hash,
+		NamaLengkap:  input.NamaLengkap,
+		Email:        input.Email,
+		NoTelepon:    input.NoTelepon,
+		Password:     hash,
+		TanggalLahir: tanggalLahir,
 	}
 
 	// Simpan ke database
@@ -125,7 +139,7 @@ func RegisterHandler(c echo.Context) error {
 	}
 
 	// Generate token JWT
-	token, err := GenerateJWT(int(user.ID), user.Nama)
+	token, err := GenerateJWT(user.ID, user.NamaLengkap)
 	if err != nil {
 		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
 		return c.JSON(http.StatusInternalServerError, response)
@@ -133,11 +147,12 @@ func RegisterHandler(c echo.Context) error {
 
 	// Response data
 	data := LoginResponseData{
-		IDUser:   int(user.ID),
-		Nama:     user.Nama,
-		Username: user.Username,
-		Email:    user.Email,
-		Token:    token,
+		IDUser:       user.ID,
+		NamaLengkap:  user.NamaLengkap,
+		Email:        user.Email,
+		NoTelepon:    user.NoTelepon,                         // Pastikan NoTelepon ada dalam response
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"), // Format tanggal jika diperlukan
+		Token:        token,
 	}
 
 	response := helper.APIResponse("Registration successful", http.StatusOK, "success", data)
@@ -145,7 +160,7 @@ func RegisterHandler(c echo.Context) error {
 }
 
 // GenerateJWT membuat token JWT
-func GenerateJWT(userID int, name string) (string, error) {
+func GenerateJWT(userID uint, name string) (string, error) {
 	claims := &jwtCustomClaims{
 		Name:   name,
 		UserID: userID,
