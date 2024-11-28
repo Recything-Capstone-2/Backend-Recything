@@ -30,7 +30,7 @@ func main() {
 	e.POST("/api/v1/login", controllers.LoginHandler)
 
 	// Menjalankan server8
-	if err := e.Start(":8090"); err != nil {
+	if err := e.Start(":8000"); err != nil {
 		e.Logger.Fatal("Failed to start server: ", err)
 	}
 }
