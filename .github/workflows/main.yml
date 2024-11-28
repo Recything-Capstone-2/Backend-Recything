@@ -1,4 +1,4 @@
-name: ci/cd feat(login & register)
+name: ci/cd feat(login & register fix)
 
 on:
     push:
