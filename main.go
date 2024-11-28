@@ -4,6 +4,7 @@ import (
 	"Backend-Recything/config"
 	"Backend-Recything/controllers"
 	"log"
+	"net/http"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -28,6 +29,11 @@ func main() {
 	// Rute autentikasi
 	e.POST("/api/v1/register", controllers.RegisterHandler)
 	e.POST("/api/v1/login", controllers.LoginHandler)
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, echo.Map{
+			"message": "Hello, World!",
+		})
+	})
 
 	// Menjalankan server8
 	if err := e.Start(":8000"); err != nil {
