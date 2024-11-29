@@ -28,6 +28,8 @@ func main() {
 	// Rute autentikasi
 	e.POST("/api/v1/register", controllers.RegisterHandler)
 	e.POST("/api/v1/login", controllers.LoginHandler)
+	e.GET("/api/v1/users", controllers.GetAllUsers)
+	e.GET("/api/v1/users/:id", controllers.GetUserByID)
 
 	// Menjalankan server
 	if err := e.Start(":8000"); err != nil {

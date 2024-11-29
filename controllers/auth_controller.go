@@ -31,6 +31,15 @@ type LoginInput struct {
 	Password string `json:"password" validate:"required,min=6"`
 }
 
+type UserResponse struct {
+	IDUser       uint   `json:"id_user"`
+	NamaLengkap  string `json:"nama_lengkap"`
+	TanggalLahir string `json:"tanggal_lahir"`
+	NoTelepon    string `json:"no_telepon"`
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+}
+
 // Struct untuk validasi input registrasi
 type RegisterInput struct {
 	NamaLengkap  string `json:"nama_lengkap" validate:"required"`
@@ -175,6 +184,57 @@ func RegisterHandler(c echo.Context) error {
 	}
 
 	response := helper.APIResponse("Registration successful", http.StatusOK, "success", data)
+	return c.JSON(http.StatusOK, response)
+}
+
+// GetAllUsers mengembalikan daftar semua pengguna
+func GetAllUsers(c echo.Context) error {
+	var users []models.User
+	result := config.DB.Find(&users)
+	if result.Error != nil {
+		response := helper.APIResponse("Failed to retrieve users", http.StatusInternalServerError, "error", nil)
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+
+	// Format data untuk menghapus field yang tidak diperlukan
+	var userResponses []UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, UserResponse{
+			IDUser:       user.ID,
+			NamaLengkap:  user.NamaLengkap,
+			TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
+			NoTelepon:    user.NoTelepon,
+			Email:        user.Email,
+			Role:         user.Role,
+		})
+	}
+
+	response := helper.APIResponse("Users retrieved successfully", http.StatusOK, "success", userResponses)
+	return c.JSON(http.StatusOK, response)
+}
+
+// GetUserByID mengembalikan data pengguna berdasarkan ID
+func GetUserByID(c echo.Context) error {
+	id := c.Param("id")
+
+	var user models.User
+	result := config.DB.First(&user, "id = ?", id)
+	if result.Error != nil || user.ID == 0 {
+		response := helper.APIResponse("User not found", http.StatusNotFound, "error", nil)
+		return c.JSON(http.StatusNotFound, response)
+	}
+
+	// Format data untuk respons
+	userResponse := UserResponse{
+		IDUser:       user.ID,
+		NamaLengkap:  user.NamaLengkap,
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
+		NoTelepon:    user.NoTelepon,
+		Email:        user.Email,
+		Role:         user.Role,
+	}
+
+	response := helper.APIResponse("User retrieved successfully", http.StatusOK, "success", userResponse)
 	return c.JSON(http.StatusOK, response)
 }
 
