@@ -15,9 +15,7 @@ func main() {
 	loadEnv()
 
 	// Inisialisasi database
-	if err := config.InitDB(); err != nil {
-		log.Fatalf("Error initializing database: %v", err)
-	}
+	config.InitDB()
 
 	// Inisialisasi Echo
 	e := echo.New()
@@ -32,7 +30,7 @@ func main() {
 	e.POST("/api/v1/login", controllers.LoginHandler)
 
 	// Menjalankan server
-	if err := e.Start(":8080"); err != nil {
+	if err := e.Start(":8000"); err != nil {
 		e.Logger.Fatal("Failed to start server: ", err)
 	}
 }
