@@ -11,6 +11,7 @@ type User struct {
 	NoTelepon    string    `gorm:"type:varchar(15)" json:"no_telepon" validate:"regexp"`
 	Password     string    `gorm:"type:varchar(255)" json:"password"`
 	Email        string    `gorm:"type:varchar(255);unique;not null" json:"email"`
+	Role         string    `gorm:"type:varchar(50);default:'user'" json:"role"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

@@ -22,6 +22,7 @@ type LoginResponseData struct {
 	NoTelepon    string `json:"no_telepon"`
 	Email        string `json:"email"`
 	Token        string `json:"token"`
+	Role         string `json:"role"` // Menambahkan role pada response
 }
 
 // Struct untuk validasi input login
@@ -37,16 +38,17 @@ type RegisterInput struct {
 	Password     string `json:"password" validate:"required,min=6"`
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
+	Role         string `json:"role" validate:"oneof=admin user"` // Validasi untuk admin/user
 }
 
 // Struct untuk JWT Claims
 type jwtCustomClaims struct {
 	Name   string `json:"name"`
 	UserID uint   `json:"userID"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// LoginHandler menangani proses login
 // LoginHandler menangani proses login
 func LoginHandler(c echo.Context) error {
 	var input LoginInput
@@ -77,20 +79,21 @@ func LoginHandler(c echo.Context) error {
 	}
 
 	// Generate token JWT
-	token, err := GenerateJWT(user.ID, user.NamaLengkap)
+	token, err := GenerateJWT(user.ID, user.NamaLengkap, user.Role)
 	if err != nil {
 		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Response data
+	// Response data dengan role
 	data := LoginResponseData{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
 		Email:        user.Email,
-		NoTelepon:    user.NoTelepon,                         // Menambahkan NoTelepon di response login
-		TanggalLahir: user.TanggalLahir.Format("2006-01-02"), // Menyertakan TanggalLahir jika perlu
+		NoTelepon:    user.NoTelepon,
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
 		Token:        token,
+		Role:         user.Role, // Pastikan role ada di sini
 	}
 
 	response := helper.APIResponse("Login successful", http.StatusOK, "success", data)
@@ -112,8 +115,17 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
+	// Jika role tidak diberikan, atur default sebagai "user"
+	if input.Role == "" {
+		input.Role = "user"
+	}
+
 	// Hash password
-	hash, _ := HashPassword(input.Password)
+	hash, err := HashPassword(input.Password)
+	if err != nil {
+		response := helper.APIResponse("Failed to hash password", http.StatusInternalServerError, "error", nil)
+		return c.JSON(http.StatusInternalServerError, response)
+	}
 
 	// Parse TanggalLahir ke time.Time
 	tanggalLahir, err := time.Parse("2006-01-02", input.TanggalLahir)
@@ -129,6 +141,7 @@ func RegisterHandler(c echo.Context) error {
 		NoTelepon:    input.NoTelepon,
 		Password:     hash,
 		TanggalLahir: tanggalLahir,
+		Role:         input.Role, // Role diambil dari input atau default "user"
 	}
 
 	// Simpan ke database
@@ -139,20 +152,21 @@ func RegisterHandler(c echo.Context) error {
 	}
 
 	// Generate token JWT
-	token, err := GenerateJWT(user.ID, user.NamaLengkap)
+	token, err := GenerateJWT(user.ID, user.NamaLengkap, user.Role)
 	if err != nil {
 		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Response data
+	// Response data dengan menambahkan role
 	data := LoginResponseData{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
 		Email:        user.Email,
-		NoTelepon:    user.NoTelepon,                         // Pastikan NoTelepon ada dalam response
-		TanggalLahir: user.TanggalLahir.Format("2006-01-02"), // Format tanggal jika diperlukan
+		NoTelepon:    user.NoTelepon,
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
 		Token:        token,
+		Role:         user.Role, // Menambahkan role dalam response
 	}
 
 	response := helper.APIResponse("Registration successful", http.StatusOK, "success", data)
@@ -160,10 +174,11 @@ func RegisterHandler(c echo.Context) error {
 }
 
 // GenerateJWT membuat token JWT
-func GenerateJWT(userID uint, name string) (string, error) {
+func GenerateJWT(userID uint, name string, role string) (string, error) {
 	claims := &jwtCustomClaims{
 		Name:   name,
 		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
