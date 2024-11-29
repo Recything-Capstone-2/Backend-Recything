@@ -78,8 +78,6 @@ jobs:
 
               sudo docker run -d --name recything -p 8000:8000 $IMAGE_URI
 
-              sudo docker run -d --name recything -p 8080:8080 $IMAGE_URI
-
             EOF
 
         - name: Clean up PEM file
