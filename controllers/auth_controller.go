@@ -108,16 +108,16 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
+	// Jika role kosong, isi default menjadi "user"
+	if input.Role == "" {
+		input.Role = "user"
+	}
+
 	// Validasi input
 	validate := validator.New()
 	if err := validate.Struct(input); err != nil {
 		response := helper.APIResponse("Validation error", http.StatusBadRequest, "error", err.Error())
 		return c.JSON(http.StatusBadRequest, response)
-	}
-
-	// Jika role tidak diberikan, atur default sebagai "user"
-	if input.Role == "" {
-		input.Role = "user"
 	}
 
 	// Hash password
