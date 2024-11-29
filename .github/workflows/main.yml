@@ -1,5 +1,5 @@
 
-name: ci/cd feat(login & register role user & admin fix)
+name: ci/cd feat(login & register role gett all user & by id)
 
 
 on:
