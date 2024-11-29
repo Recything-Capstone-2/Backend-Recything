@@ -13,4 +13,5 @@ COPY --from=builder /app/main .
 COPY .env .env
 RUN apk update && apk add --no-cache ca-certificates
 EXPOSE 8000
+
 CMD ["./main"]
