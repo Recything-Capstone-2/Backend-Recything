@@ -1,5 +1,5 @@
 
-name: ci/cd feat(login & register)
+name: ci/cd feat(login & register role user & admin fix)
 
 
 on:
@@ -77,8 +77,6 @@ jobs:
               # Run the new container
 
               sudo docker run -d --name recything -p 8000:8000 $IMAGE_URI
-
-              sudo docker run -d --name my-container -p 8080:8080 $IMAGE_URI
 
             EOF
 
