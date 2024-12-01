@@ -51,11 +51,7 @@ func InitDB() error {
 	return nil
 }
 func InitCloudinary() (*cloudinary.Cloudinary, error) {
-	cld, err := cloudinary.NewFromParams(
-		os.Getenv("CLOUDINARY_CLOUD_NAME"),
-		os.Getenv("CLOUDINARY_API_KEY"),
-		os.Getenv("CLOUDINARY_API_SECRET"),
-	)
+	cld, err := cloudinary.NewFromURL(os.Getenv("CLOUDINARY_URL"))
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ func main() {
 	e.GET("/api/v1/users", controllers.GetAllUsers)
 	e.GET("/api/v1/users/:id", controllers.GetUserByID)
 	e.Static("/uploads", "uploads")
-	e.PUT("api/v1/user/photo/:id", controllers.UpdatePhotoHandler)
+	e.PUT("api/v1/user/photo/:id", controllers.UpdateUserPhoto)
 	e.GET("/api/v1/users", controllers.GetAllUsers)
 	e.GET("/api/v1/users/:id", controllers.GetUserByID)
 

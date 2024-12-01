@@ -4,7 +4,6 @@ import (
 	"Backend-Recything/config"
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -274,21 +273,15 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 // UpdatePhotoHandler untuk menangani update foto pengguna
-func UpdatePhotoHandler(c echo.Context) error {
+func UpdateUserPhoto(c echo.Context) error {
+	// Ambil user ID dari parameter
 	id := c.Param("id")
 
-	// Validasi ID
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "Invalid user ID",
-		})
-	}
-
-	// Ambil file yang diupload
+	// Ambil file dari request
 	file, err := c.FormFile("photo")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "No file uploaded",
+			"message": "Failed to retrieve photo file",
 		})
 	}
 
@@ -296,49 +289,48 @@ func UpdatePhotoHandler(c echo.Context) error {
 	src, err := file.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to open uploaded file",
+			"message": "Failed to open photo file",
 		})
 	}
 	defer src.Close()
 
-	// Inisialisasi Cloudinary
+	// Upload ke Cloudinary
 	cld, err := config.InitCloudinary()
 	if err != nil {
+		log.Printf("Cloudinary initialization error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to initialize Cloudinary",
+			"message": "Cloudinary initialization failed",
 		})
 	}
 
-	// Unggah file ke Cloudinary
-	uploadResult, err := cld.Upload.Upload(context.Background(), src, uploader.UploadParams{
-		PublicID: "profile_photos/" + id,
+	// Upload file ke Cloudinary
+	uploadResult, err := cld.Upload.Upload(c.Request().Context(), src, uploader.UploadParams{
+		Folder: "user_photos", // Menyimpan foto dalam folder khusus
 	})
 	if err != nil {
+		log.Printf("Cloudinary upload error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to upload to Cloudinary",
+			"message": "Failed to upload photo to Cloudinary",
 		})
 	}
 
-	// Cari user berdasarkan ID
+	// Update foto pengguna di database
 	var user models.User
-	result := config.DB.First(&user, "id = ?", id)
-	if result.Error != nil || user.ID == 0 {
+	if err := config.DB.First(&user, id).Error; err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": "User not found",
 		})
 	}
 
-	// Update path foto di database
 	user.Photo = uploadResult.SecureURL
 	if err := config.DB.Save(&user).Error; err != nil {
-		log.Printf("Database error: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to update photo URL in database",
+			"message": "Failed to save user photo",
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "Photo uploaded and updated successfully",
-		"photo":   uploadResult.SecureURL,
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "User photo updated successfully",
+		"photo":   user.Photo,
 	})
 }
