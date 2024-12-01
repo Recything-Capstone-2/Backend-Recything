@@ -5,6 +5,7 @@ import (
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -324,6 +325,7 @@ func UpdatePhotoHandler(c echo.Context) error {
 	user.Photo = uploadResult.SecureURL
 	result = config.DB.Save(&user)
 	if result.Error != nil {
+		log.Printf("Database error: %s\n", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to update photo URL in database",
 		})
