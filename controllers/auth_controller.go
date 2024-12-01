@@ -53,6 +53,7 @@ type RegisterInput struct {
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
 	Role         string `json:"role" validate:"oneof=admin user"` // Validasi untuk admin/user
+	Photo        string `json:"photo" validate:"required,url"`
 }
 
 type RegisterResponse struct {
@@ -127,7 +128,6 @@ func LoginHandler(c echo.Context) error {
 
 // RegisterHandler menangani proses registrasi
 func RegisterHandler(c echo.Context) error {
-	// Bind data input
 	var input RegisterInput
 	if err := c.Bind(&input); err != nil {
 		response := helper.APIResponse("Invalid request", http.StatusBadRequest, "error", nil)
@@ -153,34 +153,11 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Parse TanggalLahir ke time.Time
+	// Parse tanggal lahir
 	tanggalLahir, err := time.Parse("2006-01-02", input.TanggalLahir)
 	if err != nil {
 		response := helper.APIResponse("Invalid birth date format", http.StatusBadRequest, "error", nil)
 		return c.JSON(http.StatusBadRequest, response)
-	}
-
-	// Tangani upload foto
-	file, err := c.FormFile("photo")
-	var photoPath string
-	if err == nil {
-		src, err := file.Open()
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to open file", http.StatusInternalServerError, "error", nil))
-		}
-		defer src.Close()
-
-		// Simpan file di folder uploads
-		photoPath = "uploads/" + file.Filename
-		dst, err := os.Create(photoPath)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to save file", http.StatusInternalServerError, "error", nil))
-		}
-		defer dst.Close()
-
-		if _, err = io.Copy(dst, src); err != nil {
-			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to copy file", http.StatusInternalServerError, "error", nil))
-		}
 	}
 
 	// Membuat user baru
@@ -191,7 +168,7 @@ func RegisterHandler(c echo.Context) error {
 		Password:     hash,
 		TanggalLahir: tanggalLahir,
 		Role:         input.Role,
-		Photo:        photoPath,
+		Photo:        input.Photo, // Simpan URL foto langsung
 	}
 
 	// Simpan ke database
@@ -201,7 +178,7 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Format respons tanpa created_at dan updated_at
+	// Format respons
 	responseData := RegisterResponse{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
