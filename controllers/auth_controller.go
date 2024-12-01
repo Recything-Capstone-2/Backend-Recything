@@ -277,6 +277,13 @@ func CheckPasswordHash(password, hash string) bool {
 func UpdatePhotoHandler(c echo.Context) error {
 	id := c.Param("id")
 
+	// Validasi ID
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid user ID",
+		})
+	}
+
 	// Ambil file yang diupload
 	file, err := c.FormFile("photo")
 	if err != nil {
@@ -314,8 +321,8 @@ func UpdatePhotoHandler(c echo.Context) error {
 
 	// Cari user berdasarkan ID
 	var user models.User
-	result := config.DB.First(&user, id)
-	if result.Error != nil {
+	result := config.DB.First(&user, "id = ?", id)
+	if result.Error != nil || user.ID == 0 {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": "User not found",
 		})
@@ -323,15 +330,14 @@ func UpdatePhotoHandler(c echo.Context) error {
 
 	// Update path foto di database
 	user.Photo = uploadResult.SecureURL
-	result = config.DB.Save(&user)
-	if result.Error != nil {
-		log.Printf("Database error: %s\n", result.Error)
+	if err := config.DB.Save(&user).Error; err != nil {
+		log.Printf("Database error: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to update photo URL in database",
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
+	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Photo uploaded and updated successfully",
 		"photo":   uploadResult.SecureURL,
 	})
