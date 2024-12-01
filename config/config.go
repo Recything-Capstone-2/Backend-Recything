@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cloudinary/cloudinary-go"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -48,4 +49,11 @@ func InitDB() error {
 
 	DB = db
 	return nil
+}
+func InitCloudinary() (*cloudinary.Cloudinary, error) {
+	cld, err := cloudinary.NewFromURL(os.Getenv("CLOUDINARY_URL"))
+	if err != nil {
+		return nil, err
+	}
+	return cld, nil
 }

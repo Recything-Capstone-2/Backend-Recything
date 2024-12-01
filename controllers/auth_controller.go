@@ -4,10 +4,12 @@ import (
 	"Backend-Recything/config"
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/api/uploader"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -22,7 +24,8 @@ type LoginResponseData struct {
 	NoTelepon    string `json:"no_telepon"`
 	Email        string `json:"email"`
 	Token        string `json:"token"`
-	Role         string `json:"role"` // Menambahkan role pada response
+	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk validasi input login
@@ -38,6 +41,7 @@ type UserResponse struct {
 	NoTelepon    string `json:"no_telepon"`
 	Email        string `json:"email"`
 	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk validasi input registrasi
@@ -48,6 +52,17 @@ type RegisterInput struct {
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
 	Role         string `json:"role" validate:"oneof=admin user"` // Validasi untuk admin/user
+	Photo        string `json:"photo" validate:"required,url"`
+}
+
+type RegisterResponse struct {
+	IDUser       uint   `json:"id_user"`
+	NamaLengkap  string `json:"nama_lengkap"`
+	TanggalLahir string `json:"tanggal_lahir"`
+	NoTelepon    string `json:"no_telepon"`
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk JWT Claims
@@ -94,7 +109,7 @@ func LoginHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Response data dengan role
+	// Response data dengan field photo
 	data := LoginResponseData{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
@@ -102,7 +117,8 @@ func LoginHandler(c echo.Context) error {
 		NoTelepon:    user.NoTelepon,
 		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
 		Token:        token,
-		Role:         user.Role, // Pastikan role ada di sini
+		Role:         user.Role,
+		Photo:        user.Photo, // Tambahkan photo ke respons
 	}
 
 	response := helper.APIResponse("Login successful", http.StatusOK, "success", data)
@@ -129,11 +145,6 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
-	// Jika role tidak diberikan, atur default sebagai "user"
-	if input.Role == "" {
-		input.Role = "user"
-	}
-
 	// Hash password
 	hash, err := HashPassword(input.Password)
 	if err != nil {
@@ -141,7 +152,7 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Parse TanggalLahir ke time.Time
+	// Parse tanggal lahir
 	tanggalLahir, err := time.Parse("2006-01-02", input.TanggalLahir)
 	if err != nil {
 		response := helper.APIResponse("Invalid birth date format", http.StatusBadRequest, "error", nil)
@@ -155,7 +166,8 @@ func RegisterHandler(c echo.Context) error {
 		NoTelepon:    input.NoTelepon,
 		Password:     hash,
 		TanggalLahir: tanggalLahir,
-		Role:         input.Role, // Role diambil dari input atau default "user"
+		Role:         input.Role,
+		Photo:        input.Photo, // Simpan URL foto langsung
 	}
 
 	// Simpan ke database
@@ -165,25 +177,18 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Generate token JWT
-	token, err := GenerateJWT(user.ID, user.NamaLengkap, user.Role)
-	if err != nil {
-		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
-		return c.JSON(http.StatusInternalServerError, response)
-	}
-
-	// Response data dengan menambahkan role
-	data := LoginResponseData{
+	// Format respons
+	responseData := RegisterResponse{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
-		Email:        user.Email,
-		NoTelepon:    user.NoTelepon,
 		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
-		Token:        token,
-		Role:         user.Role, // Menambahkan role dalam response
+		NoTelepon:    user.NoTelepon,
+		Email:        user.Email,
+		Role:         user.Role,
+		Photo:        user.Photo,
 	}
 
-	response := helper.APIResponse("Registration successful", http.StatusOK, "success", data)
+	response := helper.APIResponse("Registration successful", http.StatusOK, "success", responseData)
 	return c.JSON(http.StatusOK, response)
 }
 
@@ -206,6 +211,7 @@ func GetAllUsers(c echo.Context) error {
 			NoTelepon:    user.NoTelepon,
 			Email:        user.Email,
 			Role:         user.Role,
+			Photo:        user.Photo, // Menambahkan photo ke respons
 		})
 	}
 
@@ -232,6 +238,7 @@ func GetUserByID(c echo.Context) error {
 		NoTelepon:    user.NoTelepon,
 		Email:        user.Email,
 		Role:         user.Role,
+		Photo:        user.Photo, // Menambahkan photo ke respons
 	}
 
 	response := helper.APIResponse("User retrieved successfully", http.StatusOK, "success", userResponse)
@@ -263,4 +270,67 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// UpdatePhotoHandler untuk menangani update foto pengguna
+func UpdateUserPhoto(c echo.Context) error {
+	// Ambil user ID dari parameter
+	id := c.Param("id")
+
+	// Ambil file dari request
+	file, err := c.FormFile("photo")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Failed to retrieve photo file",
+		})
+	}
+
+	// Buka file
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to open photo file",
+		})
+	}
+	defer src.Close()
+
+	// Upload ke Cloudinary
+	cld, err := config.InitCloudinary()
+	if err != nil {
+		log.Printf("Cloudinary initialization error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Cloudinary initialization failed",
+		})
+	}
+
+	// Upload file ke Cloudinary
+	uploadResult, err := cld.Upload.Upload(c.Request().Context(), src, uploader.UploadParams{
+		Folder: "user_photos", // Menyimpan foto dalam folder khusus
+	})
+	if err != nil {
+		log.Printf("Cloudinary upload error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to upload photo to Cloudinary",
+		})
+	}
+
+	// Update foto pengguna di database
+	var user models.User
+	if err := config.DB.First(&user, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "User not found",
+		})
+	}
+
+	user.Photo = uploadResult.SecureURL
+	if err := config.DB.Save(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to save user photo",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "User photo updated successfully",
+		"photo":   user.Photo,
+	})
 }

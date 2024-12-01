@@ -1,6 +1,4 @@
-
-name: ci/cd feat(login & register role user & admin fix)
-
+name: ci/cd pipplane fix
 
 on:
     push:
