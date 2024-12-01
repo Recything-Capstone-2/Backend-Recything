@@ -332,7 +332,7 @@ func UpdatePhotoHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
-		"message":   "Photo uploaded and updated successfully",
-		"photo_url": uploadResult.SecureURL,
+		"message": "Photo uploaded and updated successfully",
+		"photo":   uploadResult.SecureURL,
 	})
 }

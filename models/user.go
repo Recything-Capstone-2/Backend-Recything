@@ -12,7 +12,7 @@ type User struct {
 	Password     string    `gorm:"type:varchar(255)" json:"password"`
 	Email        string    `gorm:"type:varchar(255);unique;not null" json:"email"`
 	Role         string    `gorm:"type:varchar(50);default:'user'" json:"role"`
-	Photo        string    `gorm:"type:varchar(255)" json:"Photo"`
+	Photo        string    `gorm:"type:varchar(255)" json:"photo"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
