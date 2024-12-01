@@ -1,4 +1,4 @@
-name: ci/cd pipplane
+name: ci/cd pipplane fix
 
 on:
     push:
