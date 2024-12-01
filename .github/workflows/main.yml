@@ -1,4 +1,4 @@
-name: ci/cd feat(login & register role gett all user & by id)
+name: ci/cd pipplane
 
 on:
     push:
