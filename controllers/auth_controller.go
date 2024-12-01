@@ -5,8 +5,10 @@ import (
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -296,37 +298,50 @@ func CheckPasswordHash(password, hash string) bool {
 
 // UpdatePhotoHandler untuk menangani update foto pengguna
 func UpdatePhotoHandler(c echo.Context) error {
-	id := c.Param("id") // Mendapatkan ID dari URL
+	id := c.Param("id")
 
 	// Mengambil file yang diupload
-	file, err := c.FormFile("photo") // "photo" adalah nama field input untuk foto
+	file, err := c.FormFile("photo")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "No file uploaded",
 		})
 	}
 
-	// Menyimpan file ke folder uploads
+	// Validasi tipe file
+	if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid file type. Only images are allowed.",
+		})
+	}
+
+	// Membuka file upload
 	src, err := file.Open()
 	if err != nil {
+		log.Printf("Failed to open file: %v\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to open uploaded file",
 		})
 	}
 	defer src.Close()
 
-	// Menyimpan file ke direktori server
-	photoPath := "uploads/" + id + "_" + file.Filename
+	// Path absolut untuk menyimpan file
+	uploadDir := "/var/www/recythingtech/uploads/"
+	photoPath := uploadDir + id + "_" + file.Filename
+
+	// Membuka file tujuan
 	dst, err := os.Create(photoPath)
 	if err != nil {
+		log.Printf("Failed to create file: %v\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to save uploaded file",
 		})
 	}
 	defer dst.Close()
 
-	// Menyalin data file yang diupload
+	// Menyalin data file
 	if _, err := io.Copy(dst, src); err != nil {
+		log.Printf("Failed to copy file: %v\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to save uploaded file",
 		})
@@ -342,9 +357,10 @@ func UpdatePhotoHandler(c echo.Context) error {
 	}
 
 	// Update path foto di database
-	user.Photo = photoPath
+	user.Photo = id + "_" + file.Filename
 	result = config.DB.Save(&user)
 	if result.Error != nil {
+		log.Printf("Failed to update database: %v\n", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to update photo path in database",
 		})
