@@ -4,6 +4,7 @@ import (
 	"Backend-Recything/config"
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -22,7 +23,8 @@ type LoginResponseData struct {
 	NoTelepon    string `json:"no_telepon"`
 	Email        string `json:"email"`
 	Token        string `json:"token"`
-	Role         string `json:"role"` // Menambahkan role pada response
+	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk validasi input login
@@ -38,6 +40,7 @@ type UserResponse struct {
 	NoTelepon    string `json:"no_telepon"`
 	Email        string `json:"email"`
 	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk validasi input registrasi
@@ -48,6 +51,16 @@ type RegisterInput struct {
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
 	Role         string `json:"role" validate:"oneof=admin user"` // Validasi untuk admin/user
+}
+
+type RegisterResponse struct {
+	IDUser       uint   `json:"id_user"`
+	NamaLengkap  string `json:"nama_lengkap"`
+	TanggalLahir string `json:"tanggal_lahir"`
+	NoTelepon    string `json:"no_telepon"`
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+	Photo        string `json:"photo"`
 }
 
 // Struct untuk JWT Claims
@@ -94,7 +107,7 @@ func LoginHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Response data dengan role
+	// Response data dengan field photo
 	data := LoginResponseData{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
@@ -102,7 +115,8 @@ func LoginHandler(c echo.Context) error {
 		NoTelepon:    user.NoTelepon,
 		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
 		Token:        token,
-		Role:         user.Role, // Pastikan role ada di sini
+		Role:         user.Role,
+		Photo:        user.Photo, // Tambahkan photo ke respons
 	}
 
 	response := helper.APIResponse("Login successful", http.StatusOK, "success", data)
@@ -111,15 +125,11 @@ func LoginHandler(c echo.Context) error {
 
 // RegisterHandler menangani proses registrasi
 func RegisterHandler(c echo.Context) error {
+	// Bind data input
 	var input RegisterInput
 	if err := c.Bind(&input); err != nil {
 		response := helper.APIResponse("Invalid request", http.StatusBadRequest, "error", nil)
 		return c.JSON(http.StatusBadRequest, response)
-	}
-
-	// Jika role kosong, isi default menjadi "user"
-	if input.Role == "" {
-		input.Role = "user"
 	}
 
 	// Validasi input
@@ -127,11 +137,6 @@ func RegisterHandler(c echo.Context) error {
 	if err := validate.Struct(input); err != nil {
 		response := helper.APIResponse("Validation error", http.StatusBadRequest, "error", err.Error())
 		return c.JSON(http.StatusBadRequest, response)
-	}
-
-	// Jika role tidak diberikan, atur default sebagai "user"
-	if input.Role == "" {
-		input.Role = "user"
 	}
 
 	// Hash password
@@ -148,6 +153,29 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
+	// Tangani upload foto
+	file, err := c.FormFile("photo")
+	var photoPath string
+	if err == nil {
+		src, err := file.Open()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to open file", http.StatusInternalServerError, "error", nil))
+		}
+		defer src.Close()
+
+		// Simpan file di folder uploads
+		photoPath = "uploads/" + file.Filename
+		dst, err := os.Create(photoPath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to save file", http.StatusInternalServerError, "error", nil))
+		}
+		defer dst.Close()
+
+		if _, err = io.Copy(dst, src); err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to copy file", http.StatusInternalServerError, "error", nil))
+		}
+	}
+
 	// Membuat user baru
 	user := models.User{
 		NamaLengkap:  input.NamaLengkap,
@@ -155,7 +183,8 @@ func RegisterHandler(c echo.Context) error {
 		NoTelepon:    input.NoTelepon,
 		Password:     hash,
 		TanggalLahir: tanggalLahir,
-		Role:         input.Role, // Role diambil dari input atau default "user"
+		Role:         input.Role,
+		Photo:        photoPath,
 	}
 
 	// Simpan ke database
@@ -165,25 +194,18 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, response)
 	}
 
-	// Generate token JWT
-	token, err := GenerateJWT(user.ID, user.NamaLengkap, user.Role)
-	if err != nil {
-		response := helper.APIResponse("Failed to generate token", http.StatusInternalServerError, "error", nil)
-		return c.JSON(http.StatusInternalServerError, response)
-	}
-
-	// Response data dengan menambahkan role
-	data := LoginResponseData{
+	// Format respons tanpa created_at dan updated_at
+	responseData := RegisterResponse{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
-		Email:        user.Email,
-		NoTelepon:    user.NoTelepon,
 		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
-		Token:        token,
-		Role:         user.Role, // Menambahkan role dalam response
+		NoTelepon:    user.NoTelepon,
+		Email:        user.Email,
+		Role:         user.Role,
+		Photo:        user.Photo,
 	}
 
-	response := helper.APIResponse("Registration successful", http.StatusOK, "success", data)
+	response := helper.APIResponse("Registration successful", http.StatusOK, "success", responseData)
 	return c.JSON(http.StatusOK, response)
 }
 
@@ -206,6 +228,7 @@ func GetAllUsers(c echo.Context) error {
 			NoTelepon:    user.NoTelepon,
 			Email:        user.Email,
 			Role:         user.Role,
+			Photo:        user.Photo, // Menambahkan photo ke respons
 		})
 	}
 
@@ -232,6 +255,7 @@ func GetUserByID(c echo.Context) error {
 		NoTelepon:    user.NoTelepon,
 		Email:        user.Email,
 		Role:         user.Role,
+		Photo:        user.Photo, // Menambahkan photo ke respons
 	}
 
 	response := helper.APIResponse("User retrieved successfully", http.StatusOK, "success", userResponse)
@@ -263,4 +287,65 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// UpdatePhotoHandler untuk menangani update foto pengguna
+func UpdatePhotoHandler(c echo.Context) error {
+	id := c.Param("id") // Mendapatkan ID dari URL
+
+	// Mengambil file yang diupload
+	file, err := c.FormFile("photo") // "photo" adalah nama field input untuk foto
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "No file uploaded",
+		})
+	}
+
+	// Menyimpan file ke folder uploads
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to open uploaded file",
+		})
+	}
+	defer src.Close()
+
+	// Menyimpan file ke direktori server
+	photoPath := "uploads/" + id + "_" + file.Filename
+	dst, err := os.Create(photoPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to save uploaded file",
+		})
+	}
+	defer dst.Close()
+
+	// Menyalin data file yang diupload
+	if _, err := io.Copy(dst, src); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to save uploaded file",
+		})
+	}
+
+	// Cari pengguna berdasarkan ID
+	var user models.User
+	result := config.DB.First(&user, id)
+	if result.Error != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "User not found",
+		})
+	}
+
+	// Update path foto di database
+	user.Photo = photoPath
+	result = config.DB.Save(&user)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to update photo path in database",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Photo uploaded and updated successfully",
+	})
 }
