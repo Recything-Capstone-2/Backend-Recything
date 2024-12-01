@@ -4,13 +4,12 @@ import (
 	"Backend-Recything/config"
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
-	"io"
-	"log"
+	"context"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/api/uploader"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -277,7 +276,7 @@ func CheckPasswordHash(password, hash string) bool {
 func UpdatePhotoHandler(c echo.Context) error {
 	id := c.Param("id")
 
-	// Mengambil file yang diupload
+	// Ambil file yang diupload
 	file, err := c.FormFile("photo")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -285,46 +284,34 @@ func UpdatePhotoHandler(c echo.Context) error {
 		})
 	}
 
-	// Validasi tipe file
-	if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "Invalid file type. Only images are allowed.",
-		})
-	}
-
-	// Membuka file upload
+	// Buka file
 	src, err := file.Open()
 	if err != nil {
-		log.Printf("Failed to open file: %v\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "Failed to open uploaded file",
 		})
 	}
 	defer src.Close()
 
-	// Path absolut untuk menyimpan file
-	uploadDir := "/var/www/recythingtech/uploads/"
-	photoPath := uploadDir + id + "_" + file.Filename
-
-	// Membuka file tujuan
-	dst, err := os.Create(photoPath)
+	// Inisialisasi Cloudinary
+	cld, err := config.InitCloudinary()
 	if err != nil {
-		log.Printf("Failed to create file: %v\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to save uploaded file",
-		})
-	}
-	defer dst.Close()
-
-	// Menyalin data file
-	if _, err := io.Copy(dst, src); err != nil {
-		log.Printf("Failed to copy file: %v\n", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to save uploaded file",
+			"message": "Failed to initialize Cloudinary",
 		})
 	}
 
-	// Cari pengguna berdasarkan ID
+	// Unggah file ke Cloudinary
+	uploadResult, err := cld.Upload.Upload(context.Background(), src, uploader.UploadParams{
+		PublicID: "profile_photos/" + id,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to upload to Cloudinary",
+		})
+	}
+
+	// Cari user berdasarkan ID
 	var user models.User
 	result := config.DB.First(&user, id)
 	if result.Error != nil {
@@ -334,16 +321,16 @@ func UpdatePhotoHandler(c echo.Context) error {
 	}
 
 	// Update path foto di database
-	user.Photo = id + "_" + file.Filename
+	user.Photo = uploadResult.SecureURL
 	result = config.DB.Save(&user)
 	if result.Error != nil {
-		log.Printf("Failed to update database: %v\n", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"message": "Failed to update photo path in database",
+			"message": "Failed to update photo URL in database",
 		})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Photo uploaded and updated successfully",
+		"message":   "Photo uploaded and updated successfully",
+		"photo_url": uploadResult.SecureURL,
 	})
 }
