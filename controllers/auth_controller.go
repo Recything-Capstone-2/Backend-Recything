@@ -334,7 +334,6 @@ func UpdateUserPhoto(c echo.Context) error {
 		"photo":   user.Photo,
 	})
 }
-
 func Logout(c echo.Context) error {
 	cookie := &http.Cookie{
 		Name:     "token",
@@ -348,3 +347,4 @@ func Logout(c echo.Context) error {
 		"message": "Berhasil Logout",
 	})
 }
+
