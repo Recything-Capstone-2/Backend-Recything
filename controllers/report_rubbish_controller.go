@@ -254,12 +254,15 @@ func GetAllReportRubbish(c echo.Context) error {
 	var reportResponses []ReportResponse
 	for _, report := range reports {
 		reportResponses = append(reportResponses, ReportResponse{
-			ID:          report.ID,
-			UserID:      report.UserID,
-			Location:    report.Location,
-			Description: report.Description,
-			Photo:       report.Photo,
-			Status:      report.Status,
+			ID:             report.ID,
+			UserID:         report.UserID,
+			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
+			Location:       report.Location,
+			Description:    report.Description,
+			Photo:          report.Photo,
+			Status:         report.Status,
+			Longitude:      report.Longitude,
+			Latitude:       report.Latitude,
 			User: UserResponse{
 				IDUser:       report.User.ID,
 				NamaLengkap:  report.User.NamaLengkap,
