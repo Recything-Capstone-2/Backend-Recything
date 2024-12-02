@@ -5,13 +5,16 @@ import (
 )
 
 type ReportRubbish struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	UserID      uint      `json:"user_id"`
-	Location    string    `json:"location"`
-	Description string    `json:"description"`
-	Photo       string    `json:"photo"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	User        User      `json:"user" gorm:"foreignKey:UserID;references:ID"`
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	UserID         uint      `json:"user_id"`
+	Location       string    `json:"location"`
+	Description    string    `json:"description"`
+	Photo          string    `json:"photo"`
+	Status         string    `json:"status"`
+	Latitude       float64   `json:"latitude"`
+	Longitude      float64   `json:"longitude"`
+	TanggalLaporan time.Time `json:"tanggal_laporan"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	User           User      `json:"user" gorm:"foreignKey:UserID;references:ID"`
 }
