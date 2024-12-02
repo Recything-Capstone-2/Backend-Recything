@@ -3,8 +3,10 @@ package main
 import (
 	"Backend-Recything/config"
 	"Backend-Recything/controllers"
+	"Backend-Recything/middlewares"
 	"log"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -20,25 +22,49 @@ func main() {
 	// Inisialisasi Echo
 	e := echo.New()
 
-	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORS()) // Tambahkan CORS jika aplikasi digunakan oleh client-side
+	// Set validator untuk Echo
+	e.Validator = &middlewares.CustomValidator{Validator: validator.New()}
 
-	// Rute autentikasi
-	e.POST("/api/v1/register", controllers.RegisterHandler)
-	e.POST("/api/v1/login", controllers.LoginHandler)
-	e.GET("/api/v1/users", controllers.GetAllUsers)
-	e.GET("/api/v1/users/:id", controllers.GetUserByID)
-	e.Static("/uploads", "uploads")
-	e.PUT("api/v1/user/photo/:id", controllers.UpdateUserPhoto)
-	e.GET("/api/v1/users", controllers.GetAllUsers)
-	e.GET("/api/v1/users/:id", controllers.GetUserByID)
+	// Middleware global
+	e.Use(middleware.Logger())  // Logging request dan response
+	e.Use(middleware.Recover()) // Menangani panic agar server tidak crash
+	e.Use(middleware.CORS())    // Mendukung CORS untuk client-side apps
 
-	// Menjalankan server
+	// Rute publik (tanpa autentikasi)
+	publicRoutes(e)
+
+	// Rute dengan autentikasi
+	protectedRoutes(e)
+
+	// Menjalankan server pada port 8000
 	if err := e.Start(":8000"); err != nil {
 		e.Logger.Fatal("Failed to start server: ", err)
 	}
+}
+
+// Rute publik (tanpa autentikasi)
+func publicRoutes(e *echo.Echo) {
+	e.POST("/api/v1/register", controllers.RegisterHandler) // Registrasi user baru
+	e.POST("/api/v1/login", controllers.LoginHandler)       // Login user
+	e.Static("/uploads", "uploads")                         // Akses file statis
+}
+
+// Rute dengan autentikasi (hanya untuk user login)
+func protectedRoutes(e *echo.Echo) {
+	authGroup := e.Group("/api/v1")
+	authGroup.Use(middlewares.AuthMiddleware) // Middleware untuk validasi token JWT
+
+	// Rute untuk user
+	authGroup.GET("/logout", controllers.Logout)                  // Logout user
+	authGroup.GET("/users", controllers.GetAllUsers)              // Mendapatkan semua data user
+	authGroup.GET("/users/:id", controllers.GetUserByID)          // Mendapatkan user berdasarkan ID
+	authGroup.PUT("/user/photo/:id", controllers.UpdateUserPhoto) // Update foto user
+
+	// Rute laporan sampah
+	authGroup.POST("/report-rubbish", controllers.CreateReportRubbish) // Membuat laporan
+	authGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
+	// Rute khusus admin (misalnya untuk memvalidasi laporan)
+	authGroup.PUT("/report-rubbish/:id/status", middlewares.RoleMiddleware("admin")(controllers.UpdateReportStatus))
 }
 
 // loadEnv memuat variabel environment dari file .env
