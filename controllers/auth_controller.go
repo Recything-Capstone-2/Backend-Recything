@@ -347,4 +347,3 @@ func Logout(c echo.Context) error {
 		"message": "Berhasil Logout",
 	})
 }
-
