@@ -334,3 +334,17 @@ func UpdateUserPhoto(c echo.Context) error {
 		"photo":   user.Photo,
 	})
 }
+func Logout(c echo.Context) error {
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+	}
+	c.SetCookie(cookie)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Berhasil Logout",
+	})
+}
+
