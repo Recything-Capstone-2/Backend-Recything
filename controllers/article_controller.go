@@ -34,17 +34,28 @@ func BikinArtikel(c echo.Context) error {
 		Judul:     input.Judul,
 		Author:    input.Author,
 		Konten:    input.Konten,
-		LinkFoto:  input.LinkFoto,  // Ini link foto wajib (URL)
-		LinkVideo: input.LinkVideo, // Ini link video opsional (URL)
+		LinkFoto:  input.LinkFoto,
+		LinkVideo: input.LinkVideo,
 	}
 
-	// simpen artikel ke database
+	// Simpan artikel ke database
 	if err := config.DB.Create(&article).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal untuk membuat artikel", http.StatusInternalServerError, "error", nil))
 	}
 
-	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses terbuat", http.StatusOK, "success", article))
+	// Format data respons tanpa `created_at` dan `updated_at`
+	articleResponse := map[string]interface{}{
+		"id":         article.ID,
+		"judul":      article.Judul,
+		"author":     article.Author,
+		"konten":     article.Konten,
+		"link_foto":  article.LinkFoto,
+		"link_video": article.LinkVideo,
+	}
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses terbuat", http.StatusOK, "success", articleResponse))
 }
+
 func AmbilSemuaArtikel(c echo.Context) error {
 	var articles []models.Article
 
