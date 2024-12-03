@@ -63,6 +63,8 @@ func protectedRoutes(e *echo.Echo) {
 	// Rute laporan sampah
 	authGroup.POST("/report-rubbish", controllers.CreateReportRubbish) // Membuat laporan
 	authGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
+	authGroup.GET("/report-rubbish/history", controllers.GetReportHistoryByUser)
+
 	// Rute khusus admin (misalnya untuk memvalidasi laporan)
 	authGroup.PUT("/report-rubbish/:id/status", middlewares.RoleMiddleware("admin")(controllers.UpdateReportStatus))
 	adminGroup := authGroup.Group("/admin", middlewares.RoleMiddleware("admin"))
