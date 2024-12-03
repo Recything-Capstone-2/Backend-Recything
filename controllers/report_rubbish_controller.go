@@ -278,3 +278,45 @@ func GetAllReportRubbish(c echo.Context) error {
 	// Mengembalikan response dengan semua laporan
 	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
+
+func GetReportHistoryByUser(c echo.Context) error {
+	// Mendapatkan userID dari konteks (token JWT)
+	userID, ok := c.Get("userID").(uint)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, helper.APIResponse("Invalid user ID from token", http.StatusUnauthorized, "error", nil))
+	}
+
+	// Query laporan berdasarkan userID
+	var reports []models.ReportRubbish
+	if err := config.DB.Preload("User").Where("user_id = ?", userID).Find(&reports).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve report history", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Mapping hasil query ke struktur response
+	var reportResponses []ReportResponse
+	for _, report := range reports {
+		reportResponses = append(reportResponses, ReportResponse{
+			ID:             report.ID,
+			UserID:         report.UserID,
+			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
+			Location:       report.Location,
+			Description:    report.Description,
+			Photo:          report.Photo,
+			Status:         report.Status,
+			Longitude:      report.Longitude,
+			Latitude:       report.Latitude,
+			User: UserResponse{
+				IDUser:       report.User.ID,
+				NamaLengkap:  report.User.NamaLengkap,
+				TanggalLahir: report.User.TanggalLahir.Format("2006-01-02"),
+				NoTelepon:    report.User.NoTelepon,
+				Email:        report.User.Email,
+				Role:         report.User.Role,
+				Photo:        report.User.Photo,
+			},
+		})
+	}
+
+	// Mengembalikan respons sukses
+	return c.JSON(http.StatusOK, helper.APIResponse("Report history retrieved successfully", http.StatusOK, "success", reportResponses))
+}
