@@ -65,6 +65,11 @@ func protectedRoutes(e *echo.Echo) {
 	authGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
 	// Rute khusus admin (misalnya untuk memvalidasi laporan)
 	authGroup.PUT("/report-rubbish/:id/status", middlewares.RoleMiddleware("admin")(controllers.UpdateReportStatus))
+	adminGroup := authGroup.Group("/admin", middlewares.RoleMiddleware("admin"))
+
+	// Rute Artikel Edukasi
+	adminGroup.POST("/articles", controllers.BikinArtikel)
+	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
 }
 
 // loadEnv memuat variabel environment dari file .env
