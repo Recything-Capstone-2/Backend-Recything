@@ -69,6 +69,7 @@ func protectedRoutes(e *echo.Echo) {
 	// Rute khusus admin (misalnya untuk memvalidasi laporan)
 	authGroup.PUT("/report-rubbish/:id/status", middlewares.RoleMiddleware("admin")(controllers.UpdateReportStatus))
 	adminGroup := authGroup.Group("/admin", middlewares.RoleMiddleware("admin"))
+	adminGroup.GET("/users/points", controllers.GetAllUserPoints)
 
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)

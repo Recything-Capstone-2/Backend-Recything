@@ -46,3 +46,45 @@ func GetUserPoints(c echo.Context) error {
 	// Mengembalikan response sukses dengan data yang diinginkan
 	return c.JSON(http.StatusOK, helper.APIResponse("User points retrieved successfully", http.StatusOK, "success", response))
 }
+
+func GetAllUserPoints(c echo.Context) error {
+	// Ambil semua data poin pengguna dari tabel Points dan preload data User
+	var userPoints []models.Points
+	if err := config.DB.Preload("User").Find(&userPoints).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve user points", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Jika tidak ada data poin ditemukan
+	if len(userPoints) == 0 {
+		return c.JSON(http.StatusNotFound, helper.APIResponse("No user points found", http.StatusNotFound, "error", nil))
+	}
+
+	// Menyiapkan respons dengan menambahkan data pengguna (User)
+	var responseData []struct {
+		ID          uint   `json:"id"`
+		UserID      uint   `json:"user_id"`
+		Points      uint   `json:"points"`
+		NamaLengkap string `json:"nama_lengkap"`
+		Email       string `json:"email"`
+	}
+
+	// Mengisi response data
+	for _, point := range userPoints {
+		responseData = append(responseData, struct {
+			ID          uint   `json:"id"`
+			UserID      uint   `json:"user_id"`
+			Points      uint   `json:"points"`
+			NamaLengkap string `json:"nama_lengkap"`
+			Email       string `json:"email"`
+		}{
+			ID:          point.ID,
+			UserID:      point.UserID,
+			Points:      point.Points,
+			NamaLengkap: point.User.NamaLengkap, // Mengakses data User
+			Email:       point.User.Email,       // Mengakses data User
+		})
+	}
+
+	// Mengembalikan response sukses dengan data yang diinginkan
+	return c.JSON(http.StatusOK, helper.APIResponse("All user points retrieved successfully", http.StatusOK, "success", responseData))
+}
