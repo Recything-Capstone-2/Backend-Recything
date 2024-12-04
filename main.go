@@ -59,6 +59,7 @@ func protectedRoutes(e *echo.Echo) {
 	authGroup.GET("/users", controllers.GetAllUsers)              // Mendapatkan semua data user
 	authGroup.GET("/users/:id", controllers.GetUserByID)          // Mendapatkan user berdasarkan ID
 	authGroup.PUT("/user/photo/:id", controllers.UpdateUserPhoto) // Update foto user
+	authGroup.GET("/users/points", controllers.GetUserPoints)
 
 	// Rute laporan sampah
 	authGroup.POST("/report-rubbish", controllers.CreateReportRubbish) // Membuat laporan

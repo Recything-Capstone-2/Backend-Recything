@@ -126,6 +126,7 @@ func LoginHandler(c echo.Context) error {
 }
 
 // RegisterHandler menangani proses registrasi
+// RegisterHandler menangani proses registrasi
 func RegisterHandler(c echo.Context) error {
 	var input RegisterInput
 	if err := c.Bind(&input); err != nil {
@@ -159,13 +160,18 @@ func RegisterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
+	// Set TanggalLahir to nil if it's zero value
+	if tanggalLahir.IsZero() {
+		tanggalLahir = time.Time{} // Set to zero value (January 1, 0001)
+	}
+
 	// Membuat user baru
 	user := models.User{
 		NamaLengkap:  input.NamaLengkap,
 		Email:        input.Email,
 		NoTelepon:    input.NoTelepon,
 		Password:     hash,
-		TanggalLahir: tanggalLahir,
+		TanggalLahir: tanggalLahir, // Assign the parsed date
 		Role:         input.Role,
 		Photo:        input.Photo, // Simpan URL foto langsung
 	}

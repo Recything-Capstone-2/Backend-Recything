@@ -13,6 +13,7 @@ type User struct {
 	Email        string    `gorm:"type:varchar(255);unique;not null" json:"email"`
 	Role         string    `gorm:"type:varchar(50);default:'user'" json:"role"`
 	Photo        string    `gorm:"type:varchar(255)" json:"photo"`
+	Points       uint      `gorm:"default:0" json:"points"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
