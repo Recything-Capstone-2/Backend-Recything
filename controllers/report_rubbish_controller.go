@@ -5,7 +5,6 @@ import (
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 // Struct untuk input laporan
 type ReportInput struct {
+	Category       string `form:"category" validate:"required,oneof=report_rubbish report_littering"`
 	Location       string `form:"location" validate:"required"` // Menggunakan alamat untuk mendapatkan latitude dan longitude
 	Description    string `form:"description" validate:"required"`
 	Photo          string `form:"photo"`
@@ -31,6 +31,7 @@ type ReportInput struct {
 type ReportResponse struct {
 	ID             uint         `json:"id"`
 	UserID         uint         `json:"user_id"`
+	Category       string       `json:"category"`
 	TanggalLaporan string       `json:"tanggal_laporan"`
 	Location       string       `json:"location"`
 	Description    string       `json:"description"`
@@ -93,101 +94,102 @@ func getCoordinatesFromAddress(address string) (float64, float64, error) {
 func CreateReportRubbish(c echo.Context) error {
 	var input ReportInput
 
-	// Mengikat data dari form-data
+	// Bind input data from the request
 	if err := c.Bind(&input); err != nil {
 		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid input", http.StatusBadRequest, "error", nil))
 	}
 
-	// Validasi input
-	if err := c.Validate(input); err != nil {
-		return c.JSON(http.StatusBadRequest, helper.APIResponse("Validation error", http.StatusBadRequest, "error", err.Error()))
-	}
-
-	// Mengambil userID dari token yang sudah diset di context
+	// Get user ID from context
 	userID, ok := c.Get("userID").(uint)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, helper.APIResponse("Invalid user ID from token", http.StatusUnauthorized, "error", nil))
 	}
 
-	// Mengambil file foto dari form-data
+	// Handle photo upload if provided
+	var photoURL string
 	file, err := c.FormFile("photo")
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, helper.APIResponse("Failed to retrieve photo file", http.StatusBadRequest, "error", nil))
+	if file != nil {
+		src, err := file.Open()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to open photo file", http.StatusInternalServerError, "error", nil))
+		}
+		defer src.Close()
+
+		if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
+			return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid file type, only images are allowed", http.StatusBadRequest, "error", nil))
+		}
+
+		cld, err := config.InitCloudinary()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Cloudinary initialization failed", http.StatusInternalServerError, "error", nil))
+		}
+
+		uploadResult, err := cld.Upload.Upload(c.Request().Context(), src, uploader.UploadParams{
+			Folder: "report_rubbish",
+		})
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to upload photo", http.StatusInternalServerError, "error", nil))
+		}
+		photoURL = uploadResult.SecureURL
 	}
 
-	// Membuka file foto
-	src, err := file.Open()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to open photo file", http.StatusInternalServerError, "error", nil))
-	}
-	defer src.Close()
-
-	// Memeriksa jenis file foto yang di-upload
-	if !strings.HasPrefix(file.Header.Get("Content-Type"), "image/") {
-		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid file type, only images are allowed", http.StatusBadRequest, "error", nil))
+	// Set status to "process" if required fields are provided
+	status := "rejected"
+	if input.Location != "" && input.Description != "" && photoURL != "" && input.TanggalLaporan != "" {
+		status = "process"
 	}
 
-	// Menginisialisasi Cloudinary untuk upload foto
-	cld, err := config.InitCloudinary()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Cloudinary initialization failed", http.StatusInternalServerError, "error", nil))
+	// Get coordinates if location is provided
+	var latitude, longitude float64
+	if input.Location != "" {
+		latitude, longitude, err = getCoordinatesFromAddress(input.Location)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to get coordinates from address", http.StatusInternalServerError, "error", err.Error()))
+		}
 	}
 
-	// Upload foto ke Cloudinary
-	uploadResult, err := cld.Upload.Upload(c.Request().Context(), src, uploader.UploadParams{
-		Folder: "report_rubbish", // Menyimpan foto di folder "report_rubbish" di Cloudinary
-	})
-	if err != nil {
-		log.Printf("Cloudinary upload error: %v", err)
-		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to upload photo", http.StatusInternalServerError, "error", nil))
-	}
-
-	// Mendapatkan koordinat (latitude, longitude) dari alamat
-	latitude, longitude, err := getCoordinatesFromAddress(input.Location)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to get coordinates from address", http.StatusInternalServerError, "error", err.Error()))
-	}
-
-	// Konversi tanggal_laporan string menjadi time.Time
+	// Parse TanggalLaporan into time.Time
 	tanggalLaporan, err := time.Parse("2006-01-02", input.TanggalLaporan)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid date format, must be YYYY-MM-DD", http.StatusBadRequest, "error", nil))
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid date format. Please use YYYY-MM-DD.", http.StatusBadRequest, "error", nil))
 	}
 
-	// Membuat laporan baru
+	// Create the report
 	report := models.ReportRubbish{
 		UserID:         userID,
+		Category:       input.Category,
 		Location:       input.Location,
 		Description:    input.Description,
-		Photo:          uploadResult.SecureURL, // Menyimpan URL foto yang diupload
-		Status:         "pending",              // Status default
+		Photo:          photoURL,
+		Status:         status,
 		Longitude:      longitude,
 		Latitude:       latitude,
-		TanggalLaporan: tanggalLaporan, // Menyimpan tanggal pelaporan dalam format time.Time
+		TanggalLaporan: tanggalLaporan, // Store as time.Time
 	}
 
-	// Menyimpan laporan ke database
+	// Save the report to the database
 	if err := config.DB.Create(&report).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to create report", http.StatusInternalServerError, "error", nil))
 	}
 
-	// Mengambil laporan dengan data pengguna
+	// Load the report with associated user data
 	var reportWithUser models.ReportRubbish
 	if err := config.DB.Preload("User").First(&reportWithUser, report.ID).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to load report with user", http.StatusInternalServerError, "error", nil))
 	}
 
-	// Membentuk respons dengan field baru
+	// Prepare the response
 	response := ReportResponse{
 		ID:             reportWithUser.ID,
-		UserID:         reportWithUser.UserID,
-		Location:       reportWithUser.Location,
-		Description:    reportWithUser.Description,
-		Photo:          reportWithUser.Photo,
-		Status:         reportWithUser.Status,
-		Longitude:      reportWithUser.Longitude,
-		Latitude:       reportWithUser.Latitude,
-		TanggalLaporan: reportWithUser.TanggalLaporan.Format("2006-01-02"), // Format tanggal untuk respons
+		UserID:         report.UserID,
+		Category:       report.Category,
+		TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"), // Return as formatted string
+		Location:       report.Location,
+		Description:    report.Description,
+		Photo:          report.Photo,
+		Status:         report.Status,
+		Longitude:      report.Longitude,
+		Latitude:       report.Latitude,
 		User: UserResponse{
 			IDUser:       reportWithUser.User.ID,
 			NamaLengkap:  reportWithUser.User.NamaLengkap,
@@ -199,63 +201,111 @@ func CreateReportRubbish(c echo.Context) error {
 		},
 	}
 
-	// Mengembalikan respons sukses
+	// Return success response
 	return c.JSON(http.StatusOK, helper.APIResponse("Report created successfully", http.StatusOK, "success", response))
 }
 
+// Fungsi untuk memperbarui status laporan dan memberikan poin jika laporan disetujui
 func UpdateReportStatus(c echo.Context) error {
-	// Ambil ID laporan dari parameter
+	// Mendapatkan ID laporan dari parameter URL
 	id := c.Param("id")
 
-	// Struktur untuk menerima input JSON
+	// Mendapatkan input status
 	input := struct {
 		Status string `json:"status" validate:"required,oneof=pending approved rejected"`
 	}{}
 
-	// Parse dan validasi input
+	// Bind dan validasi input
 	if err := c.Bind(&input); err != nil {
 		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid input format", http.StatusBadRequest, "error", nil))
 	}
 
-	if err := c.Validate(&input); err != nil {
-		return c.JSON(http.StatusBadRequest, helper.APIResponse("Validation error: "+err.Error(), http.StatusBadRequest, "error", nil))
-	}
-
-	// Akses database untuk memperbarui status
-	db := config.DB                  // Pastikan `config.DB` adalah instance database yang diinisialisasi sebelumnya
-	report := models.ReportRubbish{} // Pastikan model `Report` sesuai dengan database Anda
-
-	// Cari laporan berdasarkan ID
-	if err := db.First(&report, id).Error; err != nil {
+	// Ambil laporan berdasarkan ID
+	var report models.ReportRubbish
+	if err := config.DB.First(&report, id).Error; err != nil {
 		return c.JSON(http.StatusNotFound, helper.APIResponse("Report not found", http.StatusNotFound, "error", nil))
 	}
 
-	// Perbarui status laporan
+	// Update status laporan
 	report.Status = input.Status
-	if err := db.Save(&report).Error; err != nil {
+	if err := config.DB.Save(&report).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to update report status", http.StatusInternalServerError, "error", nil))
 	}
 
-	// Berikan respons sukses
-	return c.JSON(http.StatusOK, helper.APIResponse("Report status updated successfully", http.StatusOK, "success", map[string]interface{}{
-		"id":     report.ID,
-		"status": report.Status,
-	}))
+	// Jika status laporan adalah "approved", beri poin ke user
+	if report.Status == "approved" {
+		var user models.User
+		if err := config.DB.First(&user, report.UserID).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to find user", http.StatusInternalServerError, "error", nil))
+		}
+
+		// Poin yang akan diberikan
+		points := uint(1000)
+
+		// Tambahkan poin ke user
+		user.Points += points
+		if err := config.DB.Save(&user).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to update user points", http.StatusInternalServerError, "error", nil))
+		}
+
+		// Update atau buat data poin di tabel Points
+		var userPoints models.Points
+		err := config.DB.Where("user_id = ?", user.ID).First(&userPoints).Error
+		if err != nil {
+			// Jika tidak ada data poin, buat data baru
+			if err := config.DB.Create(&models.Points{
+				UserID: user.ID,
+				Points: points,
+			}).Error; err != nil {
+				return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to add points", http.StatusInternalServerError, "error", nil))
+			}
+		} else {
+			// Jika data poin sudah ada, update
+			userPoints.Points += points
+			if err := config.DB.Save(&userPoints).Error; err != nil {
+				return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to update points", http.StatusInternalServerError, "error", nil))
+			}
+		}
+	}
+
+	// Siapkan respons dengan metadata dan data yang relevan
+	responseData := struct {
+		ID     uint   `json:"id"`
+		Status string `json:"status"`
+		UserID uint   `json:"user_id"`
+	}{
+		ID:     report.ID,
+		Status: report.Status,
+		UserID: report.UserID,
+	}
+
+	// Mengembalikan respons sukses dengan metadata dan data yang relevan
+	response := helper.APIResponse("Report status updated successfully", http.StatusOK, "success", responseData)
+	return c.JSON(http.StatusOK, response)
 }
 
 func GetAllReportRubbish(c echo.Context) error {
-	// Mendapatkan semua laporan dari database
+	// Mendapatkan parameter kategori
+	category := c.QueryParam("category")
+
+	// Query database dengan filter kategori jika ada
 	var reports []models.ReportRubbish
-	if err := config.DB.Preload("User").Find(&reports).Error; err != nil {
+	db := config.DB
+	if category != "" {
+		db = db.Where("category = ?", category)
+	}
+
+	if err := db.Preload("User").Find(&reports).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to load reports", http.StatusInternalServerError, "error", nil))
 	}
 
-	// Menyiapkan response
+	// Mapping hasil ke response
 	var reportResponses []ReportResponse
 	for _, report := range reports {
 		reportResponses = append(reportResponses, ReportResponse{
 			ID:             report.ID,
 			UserID:         report.UserID,
+			Category:       report.Category, // Tambahkan kategori
 			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
 			Location:       report.Location,
 			Description:    report.Description,
@@ -266,7 +316,7 @@ func GetAllReportRubbish(c echo.Context) error {
 			User: UserResponse{
 				IDUser:       report.User.ID,
 				NamaLengkap:  report.User.NamaLengkap,
-				TanggalLahir: report.User.TanggalLahir.Format("2006-01-02"), // Format sesuai kebutuhan
+				TanggalLahir: report.User.TanggalLahir.Format("2006-01-02"),
 				NoTelepon:    report.User.NoTelepon,
 				Email:        report.User.Email,
 				Role:         report.User.Role,
@@ -274,8 +324,6 @@ func GetAllReportRubbish(c echo.Context) error {
 			},
 		})
 	}
-
-	// Mengembalikan response dengan semua laporan
 	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
 
@@ -319,4 +367,50 @@ func GetReportHistoryByUser(c echo.Context) error {
 
 	// Mengembalikan respons sukses
 	return c.JSON(http.StatusOK, helper.APIResponse("Report history retrieved successfully", http.StatusOK, "success", reportResponses))
+}
+
+func AddPointsToUser(c echo.Context) error {
+	// Ambil userID dari token (misalnya menggunakan JWT)
+	userID, ok := c.Get("userID").(uint)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, "Invalid user ID from token")
+	}
+
+	// Ambil jumlah poin yang ingin ditambahkan (misalnya dari input request)
+	points := uint(1000) // Ganti dengan poin yang Anda inginkan
+
+	// Dapatkan user berdasarkan userID
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, "User not found")
+	}
+
+	// Tambahkan poin ke user
+	user.Points += points
+
+	// Simpan perubahan pada user
+	if err := config.DB.Save(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, "Failed to update user points")
+	}
+
+	// Cek apakah data poin untuk user sudah ada
+	var userPoints models.Points
+	err := config.DB.Where("user_id = ?", user.ID).First(&userPoints).Error
+	if err != nil {
+		// Jika tidak ada, buat data poin baru
+		if err := config.DB.Create(&models.Points{
+			UserID: user.ID,
+			Points: points,
+		}).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, "Failed to create points record")
+		}
+	} else {
+		// Jika sudah ada, update jumlah poin
+		userPoints.Points += points
+		if err := config.DB.Save(&userPoints).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, "Failed to update points")
+		}
+	}
+
+	return c.JSON(http.StatusOK, "Points added successfully")
 }
