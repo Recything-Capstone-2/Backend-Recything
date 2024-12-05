@@ -76,6 +76,7 @@ func protectedRoutes(e *echo.Echo) {
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
+	authGroup.GET("/articles/:id", controllers.AmbilArtikelByID)
 }
 
 // loadEnv memuat variabel environment dari file .env
