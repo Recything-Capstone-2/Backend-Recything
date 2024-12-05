@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/cloudinary/cloudinary-go/api/uploader"
@@ -63,6 +64,15 @@ type RegisterResponse struct {
 	Email        string `json:"email"`
 	Role         string `json:"role"`
 	Photo        string `json:"photo"`
+}
+
+type UpdateUserDataInput struct {
+	NamaLengkap  string `json:"nama_lengkap" validate:"required"`
+	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
+	NoTelepon    string `json:"no_telepon" validate:"required"`
+	Email        string `json:"email" validate:"required,email"`
+	OldPassword  string `json:"old_password"` // Optional: Password lama
+	NewPassword  string `json:"new_password"` // Optional: Password baru
 }
 
 // Struct untuk JWT Claims
@@ -340,6 +350,7 @@ func UpdateUserPhoto(c echo.Context) error {
 		"photo":   user.Photo,
 	})
 }
+
 func Logout(c echo.Context) error {
 	cookie := &http.Cookie{
 		Name:     "token",
@@ -352,4 +363,88 @@ func Logout(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Berhasil Logout",
 	})
+}
+
+// Fungsi untuk mengupdate data diri dan mengganti password pengguna
+func UpdateUserData(c echo.Context) error {
+	// Ambil ID user dari parameter
+	id := c.Param("id")
+	userID, err := strconv.ParseUint(id, 10, 32) // Konversi id (string) ke uint
+	if err != nil {
+		response := helper.APIResponse("Invalid user ID", http.StatusBadRequest, "error", nil)
+		return c.JSON(http.StatusBadRequest, response)
+	}
+
+	// Ambil userID dari JWT token
+	tokenUserID := c.Get("userID").(uint)
+	if tokenUserID != uint(userID) {
+		response := helper.APIResponse("You can only update your own data", http.StatusForbidden, "error", nil)
+		return c.JSON(http.StatusForbidden, response)
+	}
+
+	// Bind input JSON ke dalam struct
+	var input UpdateUserDataInput
+	if err := c.Bind(&input); err != nil {
+		response := helper.APIResponse("Invalid request", http.StatusBadRequest, "error", nil)
+		return c.JSON(http.StatusBadRequest, response)
+	}
+
+	// Validasi input
+	validate := validator.New()
+	if err := validate.Struct(input); err != nil {
+		response := helper.APIResponse("Validation error", http.StatusBadRequest, "error", err.Error())
+		return c.JSON(http.StatusBadRequest, response)
+	}
+
+	// Cari user berdasarkan ID
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		response := helper.APIResponse("User not found", http.StatusNotFound, "error", nil)
+		return c.JSON(http.StatusNotFound, response)
+	}
+
+	// Jika password lama ada, maka verifikasi dan update password
+	if input.OldPassword != "" {
+		if !CheckPasswordHash(input.OldPassword, user.Password) {
+			response := helper.APIResponse("Old password is incorrect", http.StatusUnauthorized, "error", nil)
+			return c.JSON(http.StatusUnauthorized, response)
+		}
+		hashedNewPassword, err := HashPassword(input.NewPassword)
+		if err != nil {
+			response := helper.APIResponse("Failed to hash new password", http.StatusInternalServerError, "error", nil)
+			return c.JSON(http.StatusInternalServerError, response)
+		}
+		user.Password = hashedNewPassword
+	}
+
+	// Update data diri user
+	user.NamaLengkap = input.NamaLengkap
+	parsedDate, err := time.Parse("2006-01-02", input.TanggalLahir)
+	if err != nil {
+		response := helper.APIResponse("Invalid date format", http.StatusBadRequest, "error", nil)
+		return c.JSON(http.StatusBadRequest, response)
+	}
+	user.TanggalLahir = parsedDate
+	user.NoTelepon = input.NoTelepon
+	user.Email = input.Email
+
+	// Simpan perubahan ke database
+	if err := config.DB.Save(&user).Error; err != nil {
+		response := helper.APIResponse("Failed to update user data", http.StatusInternalServerError, "error", nil)
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+
+	// Format response data
+	userResponse := UserResponse{
+		IDUser:       user.ID,
+		NamaLengkap:  user.NamaLengkap,
+		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
+		NoTelepon:    user.NoTelepon,
+		Email:        user.Email,
+		Role:         user.Role,
+		Photo:        user.Photo,
+	}
+
+	response := helper.APIResponse("User data updated successfully", http.StatusOK, "success", userResponse)
+	return c.JSON(http.StatusOK, response)
 }
