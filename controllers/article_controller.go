@@ -79,17 +79,32 @@ func AmbilSemuaArtikel(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses diambil", http.StatusOK, "success", articleResponses))
 }
+
 func AmbilArtikelByID(c echo.Context) error {
+	// Ambil ID dari parameter URL
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid ID"})
+		// Respon untuk ID tidak valid
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("ID tidak valid", http.StatusBadRequest, "error", nil))
 	}
 
+	// Cari artikel berdasarkan ID
 	var artikel models.Article
 	if err := config.DB.First(&artikel, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Article tidak ditemukan"})
+		// Respon jika artikel tidak ditemukan
+		return c.JSON(http.StatusNotFound, helper.APIResponse("Artikel tidak ditemukan", http.StatusNotFound, "error", nil))
 	}
 
-	return c.JSON(http.StatusOK, artikel)
+	// Format respons artikel
+	artikelResponse := map[string]interface{}{
+		"id":         artikel.ID,
+		"judul":      artikel.Judul,
+		"author":     artikel.Author,
+		"konten":     artikel.Konten,
+		"link_foto":  artikel.LinkFoto,
+		"link_video": artikel.LinkVideo,
+	}
+	// Respon sukses
+	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil ditemukan", http.StatusOK, "success", artikelResponse))
 }
