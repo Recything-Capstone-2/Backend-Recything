@@ -5,6 +5,7 @@ import (
 	"Backend-Recything/helper"
 	"Backend-Recything/models"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
@@ -77,4 +78,18 @@ func AmbilSemuaArtikel(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses diambil", http.StatusOK, "success", articleResponses))
+}
+func AmbilArtikelByID(c echo.Context) error {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid ID"})
+	}
+
+	var artikel models.Article
+	if err := config.DB.First(&artikel, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "Article tidak ditemukan"})
+	}
+
+	return c.JSON(http.StatusOK, artikel)
 }
