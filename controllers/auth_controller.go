@@ -70,7 +70,7 @@ type UpdateUserDataInput struct {
 	NamaLengkap  string `json:"nama_lengkap" validate:"required"`
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
-	Email        string `json:"email" validate:"required,email"`
+	Email        string `json:"email" ,email"`
 	OldPassword  string `json:"old_password"` // Optional: Password lama
 	NewPassword  string `json:"new_password"` // Optional: Password baru
 }
@@ -389,13 +389,6 @@ func UpdateUserData(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response)
 	}
 
-	// Validasi input
-	validate := validator.New()
-	if err := validate.Struct(input); err != nil {
-		response := helper.APIResponse("Validation error", http.StatusBadRequest, "error", err.Error())
-		return c.JSON(http.StatusBadRequest, response)
-	}
-
 	// Cari user berdasarkan ID
 	var user models.User
 	if err := config.DB.First(&user, userID).Error; err != nil {
@@ -404,7 +397,7 @@ func UpdateUserData(c echo.Context) error {
 	}
 
 	// Jika password lama ada, maka verifikasi dan update password
-	if input.OldPassword != "" {
+	if input.OldPassword != "" && input.NewPassword != "" {
 		if !CheckPasswordHash(input.OldPassword, user.Password) {
 			response := helper.APIResponse("Old password is incorrect", http.StatusUnauthorized, "error", nil)
 			return c.JSON(http.StatusUnauthorized, response)
@@ -417,16 +410,27 @@ func UpdateUserData(c echo.Context) error {
 		user.Password = hashedNewPassword
 	}
 
-	// Update data diri user
-	user.NamaLengkap = input.NamaLengkap
-	parsedDate, err := time.Parse("2006-01-02", input.TanggalLahir)
-	if err != nil {
-		response := helper.APIResponse("Invalid date format", http.StatusBadRequest, "error", nil)
-		return c.JSON(http.StatusBadRequest, response)
+	// Periksa setiap field input apakah diisi, jika iya, baru update
+	if input.NamaLengkap != "" {
+		user.NamaLengkap = input.NamaLengkap
 	}
-	user.TanggalLahir = parsedDate
-	user.NoTelepon = input.NoTelepon
-	user.Email = input.Email
+
+	if input.TanggalLahir != "" {
+		parsedDate, err := time.Parse("2006-01-02", input.TanggalLahir)
+		if err != nil {
+			response := helper.APIResponse("Invalid date format", http.StatusBadRequest, "error", nil)
+			return c.JSON(http.StatusBadRequest, response)
+		}
+		user.TanggalLahir = parsedDate
+	}
+
+	if input.NoTelepon != "" {
+		user.NoTelepon = input.NoTelepon
+	}
+
+	if input.Email != "" {
+		user.Email = input.Email
+	}
 
 	// Simpan perubahan ke database
 	if err := config.DB.Save(&user).Error; err != nil {
