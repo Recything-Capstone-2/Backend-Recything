@@ -346,6 +346,7 @@ func GetReportHistoryByUser(c echo.Context) error {
 		reportResponses = append(reportResponses, ReportResponse{
 			ID:             report.ID,
 			UserID:         report.UserID,
+			Category:       report.Category,
 			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
 			Location:       report.Location,
 			Description:    report.Description,
