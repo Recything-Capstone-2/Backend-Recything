@@ -70,7 +70,7 @@ type UpdateUserDataInput struct {
 	NamaLengkap  string `json:"nama_lengkap" validate:"required"`
 	TanggalLahir string `json:"tanggal_lahir" validate:"required"`
 	NoTelepon    string `json:"no_telepon" validate:"required"`
-	Email        string `json:"email" ,email"`
+	Email        string `json:"email" validate:"email"`
 	OldPassword  string `json:"old_password"` // Optional: Password lama
 	NewPassword  string `json:"new_password"` // Optional: Password baru
 }
