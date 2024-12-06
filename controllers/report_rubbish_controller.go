@@ -415,3 +415,42 @@ func AddPointsToUser(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, "Points added successfully")
 }
+
+func GetLatestReports(c echo.Context) error {
+	// Inisialisasi slice untuk menampung hasil query
+	var reports []models.ReportRubbish
+
+	// Query database: Ambil 10 laporan terbaru berdasarkan TanggalLaporan
+	if err := config.DB.Order("tanggal_laporan DESC").Limit(10).Preload("User").Find(&reports).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve latest reports", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Mapping hasil query ke response
+	var reportResponses []ReportResponse
+	for _, report := range reports {
+		reportResponses = append(reportResponses, ReportResponse{
+			ID:             report.ID,
+			UserID:         report.UserID,
+			Category:       report.Category,
+			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
+			Location:       report.Location,
+			Description:    report.Description,
+			Photo:          report.Photo,
+			Status:         report.Status,
+			Longitude:      report.Longitude,
+			Latitude:       report.Latitude,
+			User: UserResponse{
+				IDUser:       report.User.ID,
+				NamaLengkap:  report.User.NamaLengkap,
+				TanggalLahir: report.User.TanggalLahir.Format("2006-01-02"),
+				NoTelepon:    report.User.NoTelepon,
+				Email:        report.User.Email,
+				Role:         report.User.Role,
+				Photo:        report.User.Photo,
+			},
+		})
+	}
+
+	// Return response
+	return c.JSON(http.StatusOK, helper.APIResponse("Latest reports retrieved successfully", http.StatusOK, "success", reportResponses))
+}

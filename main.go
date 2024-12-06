@@ -73,6 +73,8 @@ func protectedRoutes(e *echo.Echo) {
 	adminGroup.GET("/users", controllers.GetAllUsers)
 	adminGroup.GET("/users/:id", controllers.GetUserByID) // Mendapatkan user berdasarkan ID
 
+	adminGroup.GET("/latest-report", controllers.GetLatestReports)
+
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
