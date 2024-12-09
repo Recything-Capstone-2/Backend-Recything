@@ -77,6 +77,7 @@ func protectedRoutes(e *echo.Echo) {
 
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
+	adminGroup.PUT("/articles/:id", controllers.UpdateArtikel)
 	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
 	authGroup.GET("/articles/:id", controllers.AmbilArtikelByID)
 }

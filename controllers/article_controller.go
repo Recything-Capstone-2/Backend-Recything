@@ -19,6 +19,15 @@ type InputBikinArtikel struct {
 	LinkVideo string `json:"link_video" validate:"omitempty,url"`
 }
 
+// Struct untuk input update artikel
+type InputUpdateArtikel struct {
+	Judul     string `json:"judul" validate:"required"`
+	Author    string `json:"author" validate:"required"`
+	Konten    string `json:"konten" validate:"required"`
+	LinkFoto  string `json:"link_foto" validate:"required,url"`
+	LinkVideo string `json:"link_video" validate:"omitempty,url"`
+}
+
 func BikinArtikel(c echo.Context) error {
 	var input InputBikinArtikel
 	if err := c.Bind(&input); err != nil {
@@ -107,4 +116,54 @@ func AmbilArtikelByID(c echo.Context) error {
 	}
 	// Respon sukses
 	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil ditemukan", http.StatusOK, "success", artikelResponse))
+}
+
+func UpdateArtikel(c echo.Context) error {
+	// Ambil ID dari parameter URL
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("ID tidak valid", http.StatusBadRequest, "error", nil))
+	}
+
+	// Cari artikel berdasarkan ID
+	var artikel models.Article
+	if err := config.DB.First(&artikel, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, helper.APIResponse("Artikel tidak ditemukan", http.StatusNotFound, "error", nil))
+	}
+
+	// Bind input dari request body
+	var input InputUpdateArtikel
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Input invalid", http.StatusBadRequest, "error", nil))
+	}
+
+	// Validasi input
+	if err := c.Validate(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Validasi error", http.StatusBadRequest, "error", helper.FormatValidationError(err)))
+	}
+
+	// Update artikel
+	artikel.Judul = input.Judul
+	artikel.Author = input.Author
+	artikel.Konten = input.Konten
+	artikel.LinkFoto = input.LinkFoto
+	artikel.LinkVideo = input.LinkVideo
+
+	// Simpan perubahan ke database
+	if err := config.DB.Save(&artikel).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal mengupdate artikel", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Format respons
+	artikelResponse := map[string]interface{}{
+		"id":         artikel.ID,
+		"judul":      artikel.Judul,
+		"author":     artikel.Author,
+		"konten":     artikel.Konten,
+		"link_foto":  artikel.LinkFoto,
+		"link_video": artikel.LinkVideo,
+	}
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil diupdate", http.StatusOK, "success", artikelResponse))
 }
