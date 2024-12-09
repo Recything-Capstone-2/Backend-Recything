@@ -467,3 +467,67 @@ func GetLatestReports(c echo.Context) error {
 	// Return response
 	return c.JSON(http.StatusOK, helper.APIResponse("Latest reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
+
+func DeductPointsFromUser(c echo.Context) error {
+	// Ambil input dari request
+	input := struct {
+		UserID uint `json:"user_id" validate:"required"`
+		Points int  `json:"points" validate:"required,min=1"` // Pastikan poin yang dikurangi minimal 1
+	}{}
+
+	// Bind dan validasi input
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid input format", http.StatusBadRequest, "error", nil))
+	}
+
+	// Cari pengguna berdasarkan ID
+	var user models.User
+	if err := config.DB.First(&user, input.UserID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, helper.APIResponse("User not found", http.StatusNotFound, "error", nil))
+	}
+
+	// Pastikan poin tidak menjadi negatif
+	if int(user.Points) < input.Points {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Insufficient points", http.StatusBadRequest, "error", nil))
+	}
+
+	// Kurangi poin pengguna
+	user.Points -= uint(input.Points)
+	if err := config.DB.Save(&user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to update user points", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Update atau buat record di tabel Points
+	var userPoints models.Points
+	err := config.DB.Where("user_id = ?", user.ID).First(&userPoints).Error
+	if err != nil {
+		// Jika tidak ada record, buat baru
+		if err := config.DB.Create(&models.Points{
+			UserID: user.ID,
+			Points: uint(user.Points), // Simpan poin terbaru
+		}).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to update points record", http.StatusInternalServerError, "error", nil))
+		}
+	} else {
+		// Jika ada, perbarui
+		userPoints.Points = uint(user.Points)
+		if err := config.DB.Save(&userPoints).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to save points record", http.StatusInternalServerError, "error", nil))
+		}
+	}
+
+	// Siapkan respons dengan tambahan nama dan email
+	responseData := struct {
+		UserID          uint   `json:"user_id"`
+		NamaLengkap     string `json:"nama_lengkap"`
+		Email           string `json:"email"`
+		RemainingPoints uint   `json:"remaining_points"`
+	}{
+		UserID:          user.ID,
+		NamaLengkap:     user.NamaLengkap,
+		Email:           user.Email,
+		RemainingPoints: user.Points,
+	}
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Points deducted successfully", http.StatusOK, "success", responseData))
+}

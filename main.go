@@ -69,11 +69,14 @@ func protectedRoutes(e *echo.Echo) {
 
 	adminGroup := authGroup.Group("/admin", middlewares.RoleMiddleware("admin"))
 	adminGroup.GET("/users/points", controllers.GetAllUserPoints)
+	adminGroup.POST("/users/points/deduct", controllers.DeductPointsFromUser)
+
 	adminGroup.GET("/users", controllers.GetAllUsers)
 	adminGroup.GET("/users/:id", controllers.GetUserByID) // Mendapatkan user berdasarkan ID
 
 	adminGroup.GET("/latest-report", controllers.GetLatestReports)
 	adminGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
+
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	adminGroup.PUT("/articles/:id", controllers.UpdateArtikel)
