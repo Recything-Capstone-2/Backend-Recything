@@ -454,3 +454,4 @@ func GetLatestReports(c echo.Context) error {
 	// Return response
 	return c.JSON(http.StatusOK, helper.APIResponse("Latest reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
+
