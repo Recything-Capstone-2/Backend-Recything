@@ -81,8 +81,6 @@ func AmbilSemuaArtikel(c echo.Context) error {
 			"konten":     article.Konten,
 			"link_foto":  article.LinkFoto,
 			"link_video": article.LinkVideo,
-			"created_at": article.CreatedAt,
-			"updated_at": article.UpdatedAt,
 		})
 	}
 
