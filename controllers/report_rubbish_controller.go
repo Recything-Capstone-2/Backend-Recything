@@ -285,15 +285,27 @@ func UpdateReportStatus(c echo.Context) error {
 }
 
 func GetAllReportRubbish(c echo.Context) error {
-	// Mendapatkan parameter kategori
+	// Mendapatkan parameter kategori dan sorting
 	category := c.QueryParam("category")
+	sortOrder := c.QueryParam("sort")
 
-	// Query database dengan filter kategori jika ada
+	// Validasi nilai sorting (default: "asc" jika tidak diisi)
+	if sortOrder != "asc" && sortOrder != "desc" && sortOrder != "" {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid sort order. Use 'asc' or 'desc'.", http.StatusBadRequest, "error", nil))
+	}
+	if sortOrder == "" {
+		sortOrder = "asc" // Default sorting: ascending
+	}
+
+	// Query database dengan filter kategori dan urutan
 	var reports []models.ReportRubbish
 	db := config.DB
 	if category != "" {
 		db = db.Where("category = ?", category)
 	}
+
+	// Tambahkan sorting berdasarkan tanggal laporan
+	db = db.Order(fmt.Sprintf("tanggal_laporan %s", sortOrder))
 
 	if err := db.Preload("User").Find(&reports).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to load reports", http.StatusInternalServerError, "error", nil))
@@ -305,7 +317,7 @@ func GetAllReportRubbish(c echo.Context) error {
 		reportResponses = append(reportResponses, ReportResponse{
 			ID:             report.ID,
 			UserID:         report.UserID,
-			Category:       report.Category, // Tambahkan kategori
+			Category:       report.Category,
 			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
 			Location:       report.Location,
 			Description:    report.Description,
@@ -324,6 +336,7 @@ func GetAllReportRubbish(c echo.Context) error {
 			},
 		})
 	}
+
 	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
 
@@ -454,4 +467,3 @@ func GetLatestReports(c echo.Context) error {
 	// Return response
 	return c.JSON(http.StatusOK, helper.APIResponse("Latest reports retrieved successfully", http.StatusOK, "success", reportResponses))
 }
-

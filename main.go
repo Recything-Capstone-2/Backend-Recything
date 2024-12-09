@@ -62,7 +62,6 @@ func protectedRoutes(e *echo.Echo) {
 
 	// Rute laporan sampah
 	authGroup.POST("/report-rubbish", controllers.CreateReportRubbish) // Membuat laporan
-	authGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
 	authGroup.GET("/report-rubbish/history", controllers.GetReportHistoryByUser)
 
 	// Rute khusus admin (misalnya untuk memvalidasi laporan)
@@ -74,7 +73,7 @@ func protectedRoutes(e *echo.Echo) {
 	adminGroup.GET("/users/:id", controllers.GetUserByID) // Mendapatkan user berdasarkan ID
 
 	adminGroup.GET("/latest-report", controllers.GetLatestReports)
-
+	adminGroup.GET("/report-rubbish", controllers.GetAllReportRubbish)
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	adminGroup.PUT("/articles/:id", controllers.UpdateArtikel)
