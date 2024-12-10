@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -285,7 +286,30 @@ func UpdateReportStatus(c echo.Context) error {
 }
 
 func GetAllReportRubbish(c echo.Context) error {
-	// Mendapatkan parameter kategori dan sorting
+	// Ambil parameter query untuk paginasi
+	pageParam := c.QueryParam("page")
+	limitParam := c.QueryParam("limit")
+
+	// Default nilai untuk paginasi
+	page := 1
+	limit := 10
+
+	// Parse parameter jika ada
+	if pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Hitung offset berdasarkan page dan limit
+	offset := (page - 1) * limit
+
+	// Ambil kategori dan sorting dari query parameter
 	category := c.QueryParam("category")
 	sortOrder := c.QueryParam("sort")
 
@@ -297,17 +321,16 @@ func GetAllReportRubbish(c echo.Context) error {
 		sortOrder = "asc" // Default sorting: ascending
 	}
 
-	// Query database dengan filter kategori dan urutan
+	// Query database dengan filter kategori dan paginasi
 	var reports []models.ReportRubbish
 	db := config.DB
 	if category != "" {
 		db = db.Where("category = ?", category)
 	}
 
-	// Tambahkan sorting berdasarkan tanggal laporan
-	db = db.Order(fmt.Sprintf("tanggal_laporan %s", sortOrder))
-
-	if err := db.Preload("User").Find(&reports).Error; err != nil {
+	// Tambahkan sorting berdasarkan tanggal laporan dan terapkan paginasi
+	if err := db.Order(fmt.Sprintf("tanggal_laporan %s", sortOrder)).
+		Offset(offset).Limit(limit).Preload("User").Find(&reports).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to load reports", http.StatusInternalServerError, "error", nil))
 	}
 
@@ -337,7 +360,14 @@ func GetAllReportRubbish(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", reportResponses))
+	// Return respons dengan metadata paginasi
+	response := map[string]interface{}{
+		"page":    page,
+		"limit":   limit,
+		"total":   len(reportResponses),
+		"reports": reportResponses,
+	}
+	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", response))
 }
 
 func GetReportHistoryByUser(c echo.Context) error {
