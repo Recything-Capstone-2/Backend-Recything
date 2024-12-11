@@ -321,14 +321,20 @@ func GetAllReportRubbish(c echo.Context) error {
 		sortOrder = "asc" // Default sorting: ascending
 	}
 
-	// Query database dengan filter kategori dan paginasi
-	var reports []models.ReportRubbish
-	db := config.DB
+	// Query database dengan filter kategori
+	var totalItems int64
+	db := config.DB.Model(&models.ReportRubbish{})
 	if category != "" {
 		db = db.Where("category = ?", category)
 	}
 
-	// Tambahkan sorting berdasarkan tanggal laporan dan terapkan paginasi
+	// Hitung total data sebelum paginasi
+	if err := db.Count(&totalItems).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to count reports", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Ambil data dengan paginasi
+	var reports []models.ReportRubbish
 	if err := db.Order(fmt.Sprintf("tanggal_laporan %s", sortOrder)).
 		Offset(offset).Limit(limit).Preload("User").Find(&reports).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to load reports", http.StatusInternalServerError, "error", nil))
@@ -360,14 +366,24 @@ func GetAllReportRubbish(c echo.Context) error {
 		})
 	}
 
-	// Return respons dengan metadata paginasi
+	// Hitung total halaman
+	totalPages := int((totalItems + int64(limit) - 1) / int64(limit))
+
+	// Respons yang diinginkan
 	response := map[string]interface{}{
-		"page":    page,
-		"limit":   limit,
-		"total":   len(reportResponses),
-		"reports": reportResponses,
+		"data": map[string]interface{}{
+			"items": reportResponses,
+			"pagination": map[string]interface{}{
+				"current_page": page,
+				"per_page":     limit,
+				"total_report": totalItems,
+				"total_pages":  totalPages,
+			},
+		},
+		"error": nil,
 	}
-	return c.JSON(http.StatusOK, helper.APIResponse("Reports retrieved successfully", http.StatusOK, "success", response))
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Report history retrieved successfully", http.StatusOK, "success", response))
 }
 
 func GetReportHistoryByUser(c echo.Context) error {
