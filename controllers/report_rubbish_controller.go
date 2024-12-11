@@ -309,8 +309,9 @@ func GetAllReportRubbish(c echo.Context) error {
 	// Hitung offset berdasarkan page dan limit
 	offset := (page - 1) * limit
 
-	// Ambil kategori dan sorting dari query parameter
+	// Ambil kategori, status, dan sorting dari query parameter
 	category := c.QueryParam("category")
+	status := c.QueryParam("status") // New status filter
 	sortOrder := c.QueryParam("sort")
 
 	// Validasi nilai sorting (default: "asc" jika tidak diisi)
@@ -321,11 +322,18 @@ func GetAllReportRubbish(c echo.Context) error {
 		sortOrder = "asc" // Default sorting: ascending
 	}
 
-	// Query database dengan filter kategori
+	// Query database dengan filter kategori dan status
 	var totalItems int64
 	db := config.DB.Model(&models.ReportRubbish{})
+
+	// Filter by category
 	if category != "" {
 		db = db.Where("category = ?", category)
+	}
+
+	// Filter by status if provided
+	if status != "" {
+		db = db.Where("status = ?", status)
 	}
 
 	// Hitung total data sebelum paginasi
