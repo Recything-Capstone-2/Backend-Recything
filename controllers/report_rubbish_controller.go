@@ -567,11 +567,13 @@ func DeductPointsFromUser(c echo.Context) error {
 		UserID          uint   `json:"user_id"`
 		NamaLengkap     string `json:"nama_lengkap"`
 		Email           string `json:"email"`
+		NoTelepone      string `json:"no_telepone"`
 		RemainingPoints uint   `json:"remaining_points"`
 	}{
 		UserID:          user.ID,
 		NamaLengkap:     user.NamaLengkap,
 		Email:           user.Email,
+		NoTelepone:      user.NoTelepon,
 		RemainingPoints: user.Points,
 	}
 
