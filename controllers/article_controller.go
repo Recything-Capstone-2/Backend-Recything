@@ -67,11 +67,42 @@ func BikinArtikel(c echo.Context) error {
 }
 
 func AmbilSemuaArtikel(c echo.Context) error {
-	var articles []models.Article
+	// Ambil parameter query untuk paginasi
+	pageParam := c.QueryParam("page")
+	limitParam := c.QueryParam("limit")
 
-	if err := config.DB.Find(&articles).Error; err != nil {
+	// Default nilai untuk paginasi
+	page := 1
+	limit := 10
+
+	// Parse parameter jika ada
+	if pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Hitung offset berdasarkan page dan limit
+	offset := (page - 1) * limit
+
+	// Hitung total artikel
+	var totalItems int64
+	if err := config.DB.Model(&models.Article{}).Count(&totalItems).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal menghitung artikel", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Ambil data artikel dengan paginasi
+	var articles []models.Article
+	if err := config.DB.Offset(offset).Limit(limit).Order("created_at DESC").Find(&articles).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal mengambil artikel", http.StatusInternalServerError, "error", nil))
 	}
+
+	// Mapping artikel ke dalam respons
 	var articleResponses []map[string]interface{}
 	for _, article := range articles {
 		articleResponses = append(articleResponses, map[string]interface{}{
@@ -81,10 +112,25 @@ func AmbilSemuaArtikel(c echo.Context) error {
 			"konten":     article.Konten,
 			"link_foto":  article.LinkFoto,
 			"link_video": article.LinkVideo,
+			"created_at": article.CreatedAt.Format("2006-01-02"), // Format waktu
 		})
 	}
 
-	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses diambil", http.StatusOK, "success", articleResponses))
+	// Hitung total halaman
+	totalPages := int((totalItems + int64(limit) - 1) / int64(limit))
+
+	// Format respons dengan paginasi
+	response := map[string]interface{}{
+		"items": articleResponses,
+		"pagination": map[string]interface{}{
+			"current_page": page,
+			"per_page":     limit,
+			"total_items":  totalItems,
+			"total_pages":  totalPages,
+		},
+	}
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Artikel sukses diambil", http.StatusOK, "success", response))
 }
 
 func AmbilArtikelByID(c echo.Context) error {
@@ -111,6 +157,7 @@ func AmbilArtikelByID(c echo.Context) error {
 		"konten":     artikel.Konten,
 		"link_foto":  artikel.LinkFoto,
 		"link_video": artikel.LinkVideo,
+		"created_at": artikel.CreatedAt.Format("2006-01-02"),
 	}
 	// Respon sukses
 	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil ditemukan", http.StatusOK, "success", artikelResponse))
