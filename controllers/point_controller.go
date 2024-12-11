@@ -66,6 +66,7 @@ func GetAllUserPoints(c echo.Context) error {
 		Points      uint   `json:"points"`
 		NamaLengkap string `json:"nama_lengkap"`
 		Email       string `json:"email"`
+		NoTelepon   string `json:"no_telepon"`
 	}
 
 	// Mengisi response data
@@ -76,12 +77,14 @@ func GetAllUserPoints(c echo.Context) error {
 			Points      uint   `json:"points"`
 			NamaLengkap string `json:"nama_lengkap"`
 			Email       string `json:"email"`
+			NoTelepon   string `json:"no_telepon"`
 		}{
 			ID:          point.ID,
 			UserID:      point.UserID,
 			Points:      point.Points,
 			NamaLengkap: point.User.NamaLengkap, // Mengakses data User
 			Email:       point.User.Email,       // Mengakses data User
+			NoTelepon:   point.User.NoTelepon,
 		})
 	}
 
