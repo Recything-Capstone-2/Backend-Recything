@@ -239,24 +239,61 @@ func GetAllUsers(c echo.Context) error {
 func GetUserByID(c echo.Context) error {
 	id := c.Param("id")
 
+	// Cari user berdasarkan ID
 	var user models.User
 	result := config.DB.First(&user, "id = ?", id)
 	if result.Error != nil || user.ID == 0 {
+		// User not found
 		response := helper.APIResponse("User not found", http.StatusNotFound, "error", nil)
 		return c.JSON(http.StatusNotFound, response)
 	}
 
+	// Ambil laporan untuk user
+	var reports []models.ReportRubbish
+
+	// Ambil semua laporan untuk user tanpa pagination
+	config.DB.Where("user_id = ?", id).Find(&reports)
+
+	// Format laporan ke dalam respons
+	var reportsResponse []ReportResponse
+	for _, report := range reports {
+		// Append each report including its status
+		reportsResponse = append(reportsResponse, ReportResponse{
+			ID:             report.ID,
+			UserID:         report.UserID,
+			Category:       report.Category,
+			TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
+			Location:       report.Location,
+			Description:    report.Description,
+			Photo:          report.Photo,
+			Status:         report.Status, // This field is now included in the response
+			Longitude:      report.Longitude,
+			Latitude:       report.Latitude,
+		})
+	}
+
 	// Format data untuk respons
-	userResponse := UserResponse{
+	userResponse := struct {
+		IDUser       uint             `json:"id_user"`
+		NamaLengkap  string           `json:"nama_lengkap"`
+		TanggalLahir string           `json:"tanggal_lahir"`
+		NoTelepon    string           `json:"no_telepon"`
+		Email        string           `json:"email"`
+		Role         string           `json:"role"`
+		Photo        string           `json:"photo"`
+		Reports      []ReportResponse `json:"reports"` // Include reports here
+	}{
 		IDUser:       user.ID,
 		NamaLengkap:  user.NamaLengkap,
 		TanggalLahir: user.TanggalLahir.Format("2006-01-02"),
 		NoTelepon:    user.NoTelepon,
 		Email:        user.Email,
 		Role:         user.Role,
-		Photo:        user.Photo, // Menambahkan photo ke respons
+		Photo:        user.Photo,
+		Reports:      reportsResponse,
 	}
 
+	// Response berhasil
 	response := helper.APIResponse("User retrieved successfully", http.StatusOK, "success", userResponse)
 	return c.JSON(http.StatusOK, response)
 }
