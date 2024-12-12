@@ -51,7 +51,7 @@ https://www.recythingtech.my.id/api/v1
   }
   ```
 - **Response:**
-  Informasi status registrasi pengguna.
+  Informasi status registrasi pengguna. **200 OK**
 
 ---
 
@@ -66,7 +66,7 @@ https://www.recythingtech.my.id/api/v1
   }
   ```
 - **Response:**
-  Token untuk autentikasi.
+  Token untuk autentikasi. **200 OK**
 
 ---
 
@@ -77,24 +77,8 @@ https://www.recythingtech.my.id/api/v1
   ```
   Authorization: Bearer <token>
   ```
-- **Response: {
-    "meta": {
-        "message": "Login successful",
-        "code": 200,
-        "status": "success"
-    },
-    "data": {
-        "id_user": 1,
-        "nama_lengkap": "Admin Recything",
-        "tanggal_lahir": "2003-03-20",
-        "no_telepon": "085357549320",
-        "email": "admin@gmail.com",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiQWRtaW4gUmVjeXRoaW5nIiwidXNlcklEIjoxLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3MzQyODAxNTB9.B-78LOPIbRlBMZXXH1b5UqXKeMe2emdVKRoh9FuNvgk",
-        "role": "admin",
-        "photo": ""
-    }
-}**
-  Status logout.
+- **Response:**
+  Status logout. **200 OK**
 
 ---
 
@@ -108,7 +92,7 @@ https://www.recythingtech.my.id/api/v1
 - **Request Body:** (Form-Data)
   - `photo`: file
 - **Response:**
-  Status pembaruan foto profil.
+  Status pembaruan foto profil. **200 OK**
 
 ---
 
@@ -131,7 +115,7 @@ https://www.recythingtech.my.id/api/v1
   }
   ```
 - **Response:**
-  Status pembaruan data diri.
+  Status pembaruan data diri. **200 OK**
 
 ---
 
@@ -143,7 +127,7 @@ https://www.recythingtech.my.id/api/v1
   Authorization: Bearer <token>
   ```
 - **Response:**
-  Poin pengguna.
+  Poin pengguna. **200 OK**
 
 ---
 
@@ -155,7 +139,7 @@ https://www.recythingtech.my.id/api/v1
   Authorization: Bearer <token>
   ```
 - **Response:**
-  Daftar poin seluruh pengguna.
+  Daftar poin seluruh pengguna. **200 OK**
 
 ---
 
@@ -177,7 +161,7 @@ https://www.recythingtech.my.id/api/v1
   }
   ```
 - **Response:**
-  Status laporan sampah.
+  Status laporan sampah. **200 OK**
 
 ---
 
@@ -193,7 +177,7 @@ https://www.recythingtech.my.id/api/v1
   - `sort`: `asc` or `desc` (optional)
   - `status`: `process`, `rejected`, `completed` (optional)
 - **Response:**
-  Daftar laporan sampah dengan paginasi dan filter.
+  Daftar laporan sampah dengan paginasi dan filter. **200 OK**
 
 ---
 
@@ -205,7 +189,7 @@ https://www.recythingtech.my.id/api/v1
   Authorization: Bearer <token>
   ```
 - **Response:**
-  Status penghapusan laporan.
+  Status penghapusan laporan. **200 OK**
 
 ---
 
@@ -227,7 +211,7 @@ https://www.recythingtech.my.id/api/v1
   }
   ```
 - **Response:**
-  Status penambahan artikel.
+  Status penambahan artikel. **200 OK**
 
 ---
 
@@ -239,7 +223,7 @@ https://www.recythingtech.my.id/api/v1
   Authorization: Bearer <token>
   ```
 - **Response:**
-  Statistik laporan sampah.
+  Statistik laporan sampah. **200 OK**
 
 ---
 
