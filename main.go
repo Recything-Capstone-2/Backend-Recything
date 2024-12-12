@@ -85,6 +85,10 @@ func protectedRoutes(e *echo.Echo) {
 	adminGroup.DELETE("/article/:id", controllers.DeleteArtikel) // Menghapus artikel berdasarkan ID
 	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
 	authGroup.GET("/articles/:id", controllers.AmbilArtikelByID)
+
+	//rute statistik
+	adminGroup.GET("/reports/statistics", controllers.FetchStatistics)
+
 }
 
 // loadEnv memuat variabel environment dari file .env
