@@ -589,29 +589,74 @@ func DeductPointsFromUser(c echo.Context) error {
 }
 
 func DeleteReportByID(c echo.Context) error {
-    // Mendapatkan ID laporan dari parameter URL
-    id := c.Param("id")
+	// Mendapatkan ID laporan dari parameter URL
+	id := c.Param("id")
 
-    // Validasi apakah ID valid (berbentuk angka)
-    reportID, err := strconv.Atoi(id)
-    if err != nil || reportID <= 0 {
-        return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid report ID", http.StatusBadRequest, "error", nil))
-    }
+	// Validasi apakah ID valid (berbentuk angka)
+	reportID, err := strconv.Atoi(id)
+	if err != nil || reportID <= 0 {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid report ID", http.StatusBadRequest, "error", nil))
+	}
 
-    // Ambil laporan berdasarkan ID
-    var report models.ReportRubbish
-    if err := config.DB.First(&report, reportID).Error; err != nil {
-        if err.Error() == "record not found" {
-            return c.JSON(http.StatusNotFound, helper.APIResponse("Report not found", http.StatusNotFound, "error", nil))
-        }
-        return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve report", http.StatusInternalServerError, "error", nil))
-    }
+	// Ambil laporan berdasarkan ID
+	var report models.ReportRubbish
+	if err := config.DB.First(&report, reportID).Error; err != nil {
+		if err.Error() == "record not found" {
+			return c.JSON(http.StatusNotFound, helper.APIResponse("Report not found", http.StatusNotFound, "error", nil))
+		}
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve report", http.StatusInternalServerError, "error", nil))
+	}
 
-    // Hapus laporan dari database
-    if err := config.DB.Delete(&report).Error; err != nil {
-        return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to delete report", http.StatusInternalServerError, "error", nil))
-    }
+	// Hapus laporan dari database
+	if err := config.DB.Delete(&report).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to delete report", http.StatusInternalServerError, "error", nil))
+	}
 
-    // Kembalikan respons sukses
-    return c.JSON(http.StatusOK, helper.APIResponse("Report deleted successfully", http.StatusOK, "success", nil))
+	// Kembalikan respons sukses
+	return c.JSON(http.StatusOK, helper.APIResponse("Report deleted successfully", http.StatusOK, "success", nil))
+}
+func GetReportByID(c echo.Context) error {
+	// Mendapatkan ID laporan dari parameter URL
+	id := c.Param("id")
+
+	// Validasi apakah ID valid (berbentuk angka)
+	reportID, err := strconv.Atoi(id)
+	if err != nil || reportID <= 0 {
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid report ID", http.StatusBadRequest, "error", nil))
+	}
+
+	// Ambil laporan berdasarkan ID
+	var report models.ReportRubbish
+	if err := config.DB.Preload("User").First(&report, reportID).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return c.JSON(http.StatusNotFound, helper.APIResponse("Report not found", http.StatusNotFound, "error", nil))
+		}
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve report", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Mapping hasil ke response
+	reportResponse := ReportResponse{
+		ID:             report.ID,
+		UserID:         report.UserID,
+		Category:       report.Category,
+		TanggalLaporan: report.TanggalLaporan.Format("2006-01-02"),
+		Location:       report.Location,
+		Description:    report.Description,
+		Photo:          report.Photo,
+		Status:         report.Status,
+		Longitude:      report.Longitude,
+		Latitude:       report.Latitude,
+		User: UserResponse{
+			IDUser:       report.User.ID,
+			NamaLengkap:  report.User.NamaLengkap,
+			TanggalLahir: report.User.TanggalLahir.Format("2006-01-02"),
+			NoTelepon:    report.User.NoTelepon,
+			Email:        report.User.Email,
+			Role:         report.User.Role,
+			Photo:        report.User.Photo,
+		},
+	}
+
+	// Kembalikan respons sukses
+	return c.JSON(http.StatusOK, helper.APIResponse("Report retrieved successfully", http.StatusOK, "success", reportResponse))
 }
