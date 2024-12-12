@@ -1,220 +1,241 @@
 # Recything API Documentation
 
-Dokumentasi lengkap API untuk platform Recything.
+Recything adalah platform yang bertujuan untuk mendorong pelaporan dan pengelolaan sampah, serta meningkatkan kesadaran lingkungan. Berikut adalah dokumentasi API untuk aplikasi Recything.
+
+## Base URL
+```
+https://www.recythingtech.my.id/api/v1
+```
 
 ---
 
-## Registrasi Pengguna
+## Endpoints Overview
 
-### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/register`
-
-### Request Body
-| Key             | Tipe    | Keterangan               |
-|------------------|---------|--------------------------|
-| `nama_lengkap`  | string  | Nama lengkap pengguna.   |
-| `email`         | string  | Email pengguna.          |
-| `tanggal_lahir` | string  | Tanggal lahir pengguna.  |
-| `no_telepon`    | string  | Nomor telepon pengguna.  |
-| `password`      | string  | Kata sandi pengguna.     |
-| `photo`         | file    | Foto profil pengguna.    |
-
----
-
-## Login
-
-### Login Admin
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/login`
-
-### Request Body
-| Key         | Tipe    | Keterangan                 |
-|-------------|---------|----------------------------|
-| `email`     | string  | Email admin: `"admin@gmail.com"`. |
-| `password`  | string  | Kata sandi admin: `"recything_passwordnya"`. |
+| Endpoint                                      | Method | Description                              |
+|----------------------------------------------|--------|------------------------------------------|
+| `/register`                                  | POST   | Register a new user                      |
+| `/login`                                     | POST   | Login for admin or user                  |
+| `/logout`                                    | GET    | Logout admin or user                     |
+| `/users`                                     | PUT    | Update profile photo                    |
+| `/user/data/:iduser`                         | PUT    | Update personal data                     |
+| `/users/points`                              | GET    | Get user points                          |
+| `/admin/users/points`                        | GET    | Get all users' points                    |
+| `/report-rubbish`                            | POST   | Add a rubbish report                     |
+| `/admin/report-rubbish`                      | GET    | Get all rubbish reports (with filters)   |
+| `/admin/report-rubbish/:id`                  | GET    | Get a specific rubbish report by ID      |
+| `/admin/report-rubbish/:id`                  | DELETE | Delete a rubbish report                  |
+| `/admin/reports/statistics`                  | GET    | Get report statistics                    |
+| `/admin/articles`                            | POST   | Add a new article                        |
+| `/admin/articles/:id`                        | PUT    | Update an existing article               |
+| `/admin/articles/:id`                        | DELETE | Delete an article                        |
+| `/articles`                                  | GET    | Get all articles                         |
+| `/articles/:id`                              | GET    | Get a specific article by ID             |
+| `/report-rubbish/history`                    | GET    | Get user's rubbish report history        |
 
 ---
 
-### Login User
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/login`
+## Endpoint Details
 
-### Request Body
-| Key         | Tipe    | Keterangan         |
-|-------------|---------|--------------------|
-| `email`     | string  | Email pengguna.    |
-| `password`  | string  | Kata sandi pengguna. |
-
----
-
-## Logout (User/Admin)
-
-### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/logout`
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-## Update Foto Profil (User/Admin)
-
-### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/users`
-
-### Request Body
-| Key     | Tipe  | Keterangan        |
-|---------|-------|-------------------|
-| `photo` | file  | Foto profil baru. |
-
-### Authorization
-- Bearer token dari sesi login.
+### 1. Register
+**Method:** `POST`
+- **URL:** `/register`
+- **Request Body:**
+  ```json
+  {
+    "nama_lengkap": "string",
+    "email": "string",
+    "tanggal_lahir": "string",
+    "no_telepon": "string",
+    "password": "string",
+    "photo": "string"
+  }
+  ```
+- **Response:**
+  Informasi status registrasi pengguna.
 
 ---
 
-## Update Data Diri (User/Admin)
-
-### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/user/data/:iduser`
-
-### Request Body
-| Key             | Tipe    | Keterangan                                  |
-|------------------|---------|---------------------------------------------|
-| `nama_lengkap`  | string  | Nama lengkap pengguna.                      |
-| `email`         | string  | Email pengguna.                             |
-| `tanggal_lahir` | string  | Tanggal lahir pengguna.                     |
-| `no_telepon`    | string  | Nomor telepon pengguna.                     |
-| `old_password`  | string  | Kata sandi lama (opsional jika tidak diubah). |
-| `new_password`  | string  | Kata sandi baru (opsional jika tidak diubah). |
-
-### Authorization
-- Bearer token dari sesi login.
+### 2. Login
+**Method:** `POST`
+- **URL:** `/login`
+- **Request Body:**
+  ```json
+  {
+    "email": "string",
+    "password": "string"
+  }
+  ```
+- **Response:**
+  Token untuk autentikasi.
 
 ---
 
-## Mendapatkan Poin
-
-### Mendapatkan Poin Pengguna (User)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/users/points`
-
-### Authorization
-- Bearer token dari sesi login.
-
-### Response
-- **200 OK**: Data poin pengguna berhasil didapatkan.
+### 3. Logout
+**Method:** `GET`
+- **URL:** `/logout`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Response:**
+  Status logout.
 
 ---
 
-### Mendapatkan Semua Poin Pengguna (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/users/points`
-
-### Authorization
-- Bearer token admin.
-
----
-
-## Pengurangan Poin Pengguna (Admin)
-
-### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/admin/users/points/deduct`
-
-### Request Body
-| Key       | Tipe | Keterangan                     |
-|-----------|------|--------------------------------|
-| `user_id` | int  | ID pengguna yang poinnya dikurangi. |
-| `points`  | int  | Jumlah poin yang dikurangi.    |
-
-### Authorization
-- Bearer token admin.
+### 4. Update Foto Profil
+**Method:** `PUT`
+- **URL:** `/users`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Request Body:** (Form-Data)
+  - `photo`: file
+- **Response:**
+  Status pembaruan foto profil.
 
 ---
 
-## Laporan Sampah
-
-### Menambahkan Laporan (User)
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/report-rubbish`
-
-### Request Body
-| Key              | Tipe    | Keterangan                          |
-|-------------------|---------|-------------------------------------|
-| `location`       | string  | Lokasi laporan.                     |
-| `description`    | string  | Deskripsi laporan.                  |
-| `photo`          | file    | Foto terkait laporan.               |
-| `tanggal_laporan`| date    | Tanggal laporan (format `YYYY-MM-DD`). |
-| `category`       | string  | Kategori: `report_rubbish` atau `report_littering`. |
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-### Mendapatkan Semua Laporan (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/report-rubbish`
-
-#### Parameter Query
-| Key   | Tipe    | Keterangan                     |
-|-------|---------|--------------------------------|
-| `sort`| string  | Urutan laporan: `asc` atau `desc`. |
-| `page`| int     | Nomor halaman untuk pagination.|
-
-### Authorization
-- Bearer token admin.
+### 5. Update Data Diri
+**Method:** `PUT`
+- **URL:** `/user/data/:iduser`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Request Body:** (Form-Data)
+  ```json
+  {
+    "nama_lengkap": "string",
+    "email": "string",
+    "tanggal_lahir": "string",
+    "no_telepon": "string",
+    "old_password": "string",
+    "new_password": "string"
+  }
+  ```
+- **Response:**
+  Status pembaruan data diri.
 
 ---
 
-### Mendapatkan 10 Laporan Terbaru (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/latest-report`
-
-### Authorization
-- Bearer token admin.
-
----
-
-### Update Status Laporan (Admin)
-#### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/report-rubbish/:idreport`
-
-### Request Body
-| Key     | Tipe    | Keterangan                             |
-|---------|---------|----------------------------------------|
-| `status`| string  | Status laporan: `approved`, `rejected`, atau `completed`. |
-
-### Authorization
-- Bearer token admin.
+### 6. Get Point User
+**Method:** `GET`
+- **URL:** `/users/points`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Response:**
+  Poin pengguna.
 
 ---
 
-## Artikel
-
-### Menambahkan Artikel (Admin)
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/admin/articles`
-
-### Request Body
-| Key           | Tipe    | Keterangan                             |
-|---------------|---------|----------------------------------------|
-| `judul`       | string  | Judul artikel.                        |
-| `author`      | string  | Penulis artikel.                      |
-| `konten`      | string  | Isi artikel.                          |
-| `link_foto`   | string  | URL untuk foto artikel.               |
-| `link_video`  | string  | URL untuk video artikel *(opsional)*. |
-
-### Authorization
-- Bearer token admin.
+### 7. Get All Point User
+**Method:** `GET`
+- **URL:** `/admin/users/points`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Response:**
+  Daftar poin seluruh pengguna.
 
 ---
 
-### Mendapatkan Semua Artikel (User)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/articles`
-
-### Authorization
-- Bearer token user.
+### 8. Add Report Rubbish
+**Method:** `POST`
+- **URL:** `/report-rubbish`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Request Body:** (Form-Data)
+  ```json
+  {
+    "location": "string",
+    "description": "string",
+    "photo": "file",
+    "tanggal_laporan": "string",
+    "category": "report_rubbish/report_littering"
+  }
+  ```
+- **Response:**
+  Status laporan sampah.
 
 ---
 
+### 9. Get All Report Rubbish
+**Method:** `GET`
+- **URL:** `/admin/report-rubbish`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Query Parameters:**
+  - `page`: int (optional)
+  - `sort`: `asc` or `desc` (optional)
+  - `status`: `process`, `rejected`, `completed` (optional)
+- **Response:**
+  Daftar laporan sampah dengan paginasi dan filter.
+
+---
+
+### 10. Delete Report
+**Method:** `DELETE`
+- **URL:** `/admin/report-rubbish/:id`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Response:**
+  Status penghapusan laporan.
+
+---
+
+### 11. Add Article
+**Method:** `POST`
+- **URL:** `/admin/articles`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Request Body:** (JSON)
+  ```json
+  {
+    "judul": "string",
+    "author": "string",
+    "konten": "string",
+    "link_foto": "string",
+    "link_video": "string" // optional
+  }
+  ```
+- **Response:**
+  Status penambahan artikel.
+
+---
+
+### 12. Statistik
+**Method:** `GET`
+- **URL:** `/admin/reports/statistics`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Response:**
+  Statistik laporan sampah.
+
+---
+
+## Authentication
+Semua endpoint (kecuali login dan register) memerlukan header berikut:
+```plaintext
+Authorization: Bearer <token>
+```
+
+## Catatan Penting
+- Gunakan endpoint sesuai dengan peran Anda (admin/user).
+- Pastikan data yang dikirim sesuai dengan tipe data yang diminta untuk menghindari error.
+
+## Kontak
+Jika Anda memiliki pertanyaan lebih lanjut, hubungi kami di [support@recythingtech.my.id](mailto:support@recythingtech.my.id).
