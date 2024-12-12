@@ -79,6 +79,7 @@ func protectedRoutes(e *echo.Echo) {
 	adminGroup.DELETE("/report-rubbish/:id", controllers.DeleteReportByID)
 	adminGroup.GET("/report-rubbish/:id", controllers.GetReportByID)
 
+
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	adminGroup.PUT("/articles/:id", controllers.UpdateArtikel)
