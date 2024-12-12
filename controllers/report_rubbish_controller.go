@@ -43,6 +43,12 @@ type ReportResponse struct {
 	User           UserResponse `json:"user"`
 }
 
+type DurationData struct {
+	Duration     int   `json:"duration"`      // Duration in months
+	ReportCounts []int `json:"report_counts"` // Count of reports per month
+	UserCounts   []int `json:"user_counts"`   // Count of users per month
+}
+
 // Struktur untuk respons dari HERE API
 type HereGeocodeResponse struct {
 	Items []struct {
@@ -659,4 +665,74 @@ func GetReportByID(c echo.Context) error {
 
 	// Kembalikan respons sukses
 	return c.JSON(http.StatusOK, helper.APIResponse("Report retrieved successfully", http.StatusOK, "success", reportResponse))
+}
+
+func FetchStatistics(c echo.Context) error {
+	// Define durations in months
+	durations := []int{1, 3, 6, 9, 12}
+
+	var result []DurationData
+
+	for _, duration := range durations {
+		// Calculate the start date for the given duration
+		startDate := time.Now().AddDate(0, -duration, 0)
+		endDate := time.Now()
+
+		// Query reports within the duration range
+		var reports []models.ReportRubbish
+		if err := config.DB.Where("tanggal_laporan BETWEEN ? AND ?", startDate, endDate).Find(&reports).Error; err != nil {
+			// Return error with helper APIResponse
+			return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to fetch reports", http.StatusInternalServerError, "error", nil))
+		}
+
+		// Initialize arrays to store counts for each month in the duration
+		reportCounts := make([]int, duration)
+		userCounts := make([]int, duration)
+
+		// Initialize maps to track users per month
+		userMap := make([]map[uint]bool, duration)
+		for i := 0; i < duration; i++ {
+			userMap[i] = make(map[uint]bool)
+		}
+
+		// Group reports by month and count the reports and users
+		for _, report := range reports {
+			// Calculate the month difference from the current date
+			monthDiff := int(time.Since(report.TanggalLaporan).Hours() / 24 / 30)
+			if monthDiff < 0 || monthDiff >= duration {
+				continue // Ignore reports that are out of the selected duration range
+			}
+
+			// Increment the report count for this month
+			reportCounts[monthDiff]++
+
+			// Add user to the map of distinct users for this month
+			userMap[monthDiff][report.UserID] = true
+		}
+
+		// Update userCounts with the number of distinct users for each month
+		for i := 0; i < duration; i++ {
+			userCounts[i] = len(userMap[i])
+		}
+
+		// Add the data for this duration to the result
+		durationData := DurationData{
+			Duration:     duration,
+			ReportCounts: reportCounts,
+			UserCounts:   userCounts,
+		}
+
+		result = append(result, durationData)
+	}
+
+	// Prepare the final response using helper.APIResponse
+	response := helper.APIResponse(
+		"Report statistics retrieved successfully",
+		http.StatusOK,
+		"success",
+		result,
+	)
+
+	// Return success response as compact JSON (no formatting)
+	return c.JSON(http.StatusOK, response)
 }
