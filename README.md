@@ -77,7 +77,23 @@ https://www.recythingtech.my.id/api/v1
   ```
   Authorization: Bearer <token>
   ```
-- **Response:**
+- **Response: {
+    "meta": {
+        "message": "Login successful",
+        "code": 200,
+        "status": "success"
+    },
+    "data": {
+        "id_user": 1,
+        "nama_lengkap": "Admin Recything",
+        "tanggal_lahir": "2003-03-20",
+        "no_telepon": "085357549320",
+        "email": "admin@gmail.com",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiQWRtaW4gUmVjeXRoaW5nIiwidXNlcklEIjoxLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3MzQyODAxNTB9.B-78LOPIbRlBMZXXH1b5UqXKeMe2emdVKRoh9FuNvgk",
+        "role": "admin",
+        "photo": ""
+    }
+}**
   Status logout.
 
 ---
