@@ -210,9 +210,39 @@ func RegisterHandler(c echo.Context) error {
 
 // GetAllUsers mengembalikan daftar semua pengguna
 func GetAllUsers(c echo.Context) error {
+	// Ambil parameter query untuk paginasi
+	pageParam := c.QueryParam("page")
+	limitParam := c.QueryParam("limit")
+
+	// Default nilai untuk paginasi
+	page := 1
+	limit := 10
+
+	// Parse parameter jika ada
+	if pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Hitung offset berdasarkan page dan limit
+	offset := (page - 1) * limit
+
+	// Query database untuk menghitung total data
+	var totalItems int64
+	if err := config.DB.Model(&models.User{}).Count(&totalItems).Error; err != nil {
+		response := helper.APIResponse("Failed to count users", http.StatusInternalServerError, "error", nil)
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+
+	// Query database untuk mengambil data dengan paginasi
 	var users []models.User
-	result := config.DB.Find(&users)
-	if result.Error != nil {
+	if err := config.DB.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
 		response := helper.APIResponse("Failed to retrieve users", http.StatusInternalServerError, "error", nil)
 		return c.JSON(http.StatusInternalServerError, response)
 	}
@@ -231,8 +261,24 @@ func GetAllUsers(c echo.Context) error {
 		})
 	}
 
-	response := helper.APIResponse("Users retrieved successfully", http.StatusOK, "success", userResponses)
-	return c.JSON(http.StatusOK, response)
+	// Hitung total halaman
+	totalPages := int((totalItems + int64(limit) - 1) / int64(limit))
+
+	// Buat respons dengan data dan informasi paginasi
+	response := map[string]interface{}{
+		"data": map[string]interface{}{
+			"items": userResponses,
+			"pagination": map[string]interface{}{
+				"current_page": page,
+				"per_page":     limit,
+				"total_users":  totalItems,
+				"total_pages":  totalPages,
+			},
+		},
+		"error": nil,
+	}
+
+	return c.JSON(http.StatusOK, helper.APIResponse("Users retrieved successfully", http.StatusOK, "success", response))
 }
 
 // GetUserByID mengembalikan data pengguna berdasarkan ID
