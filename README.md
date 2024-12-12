@@ -51,4 +51,4 @@ Certain endpoints require a Bearer token for authentication. Tokens are issued u
 5. Follow the API endpoints and authentication process to integrate.
 
 ## Additional Resources
-- [Postman Collection](Recything-Capstone2.postman_collection.json) for testing.
+- [DOC API ](https://docs.google.com/document/d/1aPhS0367yXb4oL2Oa8R_vQZX5aUaIab7JDRtRYaVNNY/edit?usp=sharing) for testing.
