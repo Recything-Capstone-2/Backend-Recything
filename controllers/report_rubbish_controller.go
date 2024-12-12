@@ -587,3 +587,31 @@ func DeductPointsFromUser(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, helper.APIResponse("Points deducted successfully", http.StatusOK, "success", responseData))
 }
+
+func DeleteReportByID(c echo.Context) error {
+    // Mendapatkan ID laporan dari parameter URL
+    id := c.Param("id")
+
+    // Validasi apakah ID valid (berbentuk angka)
+    reportID, err := strconv.Atoi(id)
+    if err != nil || reportID <= 0 {
+        return c.JSON(http.StatusBadRequest, helper.APIResponse("Invalid report ID", http.StatusBadRequest, "error", nil))
+    }
+
+    // Ambil laporan berdasarkan ID
+    var report models.ReportRubbish
+    if err := config.DB.First(&report, reportID).Error; err != nil {
+        if err.Error() == "record not found" {
+            return c.JSON(http.StatusNotFound, helper.APIResponse("Report not found", http.StatusNotFound, "error", nil))
+        }
+        return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to retrieve report", http.StatusInternalServerError, "error", nil))
+    }
+
+    // Hapus laporan dari database
+    if err := config.DB.Delete(&report).Error; err != nil {
+        return c.JSON(http.StatusInternalServerError, helper.APIResponse("Failed to delete report", http.StatusInternalServerError, "error", nil))
+    }
+
+    // Kembalikan respons sukses
+    return c.JSON(http.StatusOK, helper.APIResponse("Report deleted successfully", http.StatusOK, "success", nil))
+}
