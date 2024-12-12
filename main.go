@@ -79,10 +79,10 @@ func protectedRoutes(e *echo.Echo) {
 	adminGroup.DELETE("/report-rubbish/:id", controllers.DeleteReportByID)
 	adminGroup.GET("/report-rubbish/:id", controllers.GetReportByID)
 
-
 	// Rute Artikel Edukasi
 	adminGroup.POST("/articles", controllers.BikinArtikel)
 	adminGroup.PUT("/articles/:id", controllers.UpdateArtikel)
+	adminGroup.DELETE("/article/:id", controllers.DeleteArtikel) // Menghapus artikel berdasarkan ID
 	authGroup.GET("/articles", controllers.AmbilSemuaArtikel)
 	authGroup.GET("/articles/:id", controllers.AmbilArtikelByID)
 }

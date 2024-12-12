@@ -6,6 +6,7 @@ import (
 	"Backend-Recything/models"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -211,4 +212,33 @@ func UpdateArtikel(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil diupdate", http.StatusOK, "success", artikelResponse))
+}
+
+func DeleteArtikel(c echo.Context) error {
+	// Ambil ID dari parameter URL
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		// Respon untuk ID tidak valid
+		return c.JSON(http.StatusBadRequest, helper.APIResponse("ID tidak valid", http.StatusBadRequest, "error", nil))
+	}
+
+	// Cari artikel berdasarkan ID
+	var artikel models.Article
+	if err := config.DB.First(&artikel, id).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			// Respon jika artikel tidak ditemukan
+			return c.JSON(http.StatusNotFound, helper.APIResponse("Artikel tidak ditemukan", http.StatusNotFound, "error", nil))
+		}
+		// Respon jika ada kesalahan lain
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal mencari artikel", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Hapus artikel dari database
+	if err := config.DB.Delete(&artikel).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, helper.APIResponse("Gagal menghapus artikel", http.StatusInternalServerError, "error", nil))
+	}
+
+	// Respon sukses
+	return c.JSON(http.StatusOK, helper.APIResponse("Artikel berhasil dihapus", http.StatusOK, "success", nil))
 }
