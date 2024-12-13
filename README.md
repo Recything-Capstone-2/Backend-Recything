@@ -1,220 +1,54 @@
 # Recything API Documentation
 
-Dokumentasi lengkap API untuk platform Recything.
-
----
-
-## Registrasi Pengguna
-
-### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/register`
-
-### Request Body
-| Key             | Tipe    | Keterangan               |
-|------------------|---------|--------------------------|
-| `nama_lengkap`  | string  | Nama lengkap pengguna.   |
-| `email`         | string  | Email pengguna.          |
-| `tanggal_lahir` | string  | Tanggal lahir pengguna.  |
-| `no_telepon`    | string  | Nomor telepon pengguna.  |
-| `password`      | string  | Kata sandi pengguna.     |
-| `photo`         | file    | Foto profil pengguna.    |
-
----
-
-## Login
-
-### Login Admin
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/login`
-
-### Request Body
-| Key         | Tipe    | Keterangan                 |
-|-------------|---------|----------------------------|
-| `email`     | string  | Email admin: `"admin@gmail.com"`. |
-| `password`  | string  | Kata sandi admin: `"recything_passwordnya"`. |
-
----
-
-### Login User
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/login`
-
-### Request Body
-| Key         | Tipe    | Keterangan         |
-|-------------|---------|--------------------|
-| `email`     | string  | Email pengguna.    |
-| `password`  | string  | Kata sandi pengguna. |
-
----
-
-## Logout (User/Admin)
-
-### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/logout`
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-## Update Foto Profil (User/Admin)
-
-### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/users`
-
-### Request Body
-| Key     | Tipe  | Keterangan        |
-|---------|-------|-------------------|
-| `photo` | file  | Foto profil baru. |
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-## Update Data Diri (User/Admin)
-
-### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/user/data/:iduser`
-
-### Request Body
-| Key             | Tipe    | Keterangan                                  |
-|------------------|---------|---------------------------------------------|
-| `nama_lengkap`  | string  | Nama lengkap pengguna.                      |
-| `email`         | string  | Email pengguna.                             |
-| `tanggal_lahir` | string  | Tanggal lahir pengguna.                     |
-| `no_telepon`    | string  | Nomor telepon pengguna.                     |
-| `old_password`  | string  | Kata sandi lama (opsional jika tidak diubah). |
-| `new_password`  | string  | Kata sandi baru (opsional jika tidak diubah). |
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-## Mendapatkan Poin
-
-### Mendapatkan Poin Pengguna (User)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/users/points`
-
-### Authorization
-- Bearer token dari sesi login.
-
-### Response
-- **200 OK**: Data poin pengguna berhasil didapatkan.
-
----
-
-### Mendapatkan Semua Poin Pengguna (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/users/points`
-
-### Authorization
-- Bearer token admin.
-
----
-
-## Pengurangan Poin Pengguna (Admin)
-
-### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/admin/users/points/deduct`
-
-### Request Body
-| Key       | Tipe | Keterangan                     |
-|-----------|------|--------------------------------|
-| `user_id` | int  | ID pengguna yang poinnya dikurangi. |
-| `points`  | int  | Jumlah poin yang dikurangi.    |
-
-### Authorization
-- Bearer token admin.
-
----
-
-## Laporan Sampah
-
-### Menambahkan Laporan (User)
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/report-rubbish`
-
-### Request Body
-| Key              | Tipe    | Keterangan                          |
-|-------------------|---------|-------------------------------------|
-| `location`       | string  | Lokasi laporan.                     |
-| `description`    | string  | Deskripsi laporan.                  |
-| `photo`          | file    | Foto terkait laporan.               |
-| `tanggal_laporan`| date    | Tanggal laporan (format `YYYY-MM-DD`). |
-| `category`       | string  | Kategori: `report_rubbish` atau `report_littering`. |
-
-### Authorization
-- Bearer token dari sesi login.
-
----
-
-### Mendapatkan Semua Laporan (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/report-rubbish`
-
-#### Parameter Query
-| Key   | Tipe    | Keterangan                     |
-|-------|---------|--------------------------------|
-| `sort`| string  | Urutan laporan: `asc` atau `desc`. |
-| `page`| int     | Nomor halaman untuk pagination.|
-
-### Authorization
-- Bearer token admin.
-
----
-
-### Mendapatkan 10 Laporan Terbaru (Admin)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/admin/latest-report`
-
-### Authorization
-- Bearer token admin.
-
----
-
-### Update Status Laporan (Admin)
-#### Endpoint
-`PUT https://www.recythingtech.my.id/api/v1/report-rubbish/:idreport`
-
-### Request Body
-| Key     | Tipe    | Keterangan                             |
-|---------|---------|----------------------------------------|
-| `status`| string  | Status laporan: `approved`, `rejected`, atau `completed`. |
-
-### Authorization
-- Bearer token admin.
-
----
-
-## Artikel
-
-### Menambahkan Artikel (Admin)
-#### Endpoint
-`POST https://www.recythingtech.my.id/api/v1/admin/articles`
-
-### Request Body
-| Key           | Tipe    | Keterangan                             |
-|---------------|---------|----------------------------------------|
-| `judul`       | string  | Judul artikel.                        |
-| `author`      | string  | Penulis artikel.                      |
-| `konten`      | string  | Isi artikel.                          |
-| `link_foto`   | string  | URL untuk foto artikel.               |
-| `link_video`  | string  | URL untuk video artikel *(opsional)*. |
-
-### Authorization
-- Bearer token admin.
-
----
-
-### Mendapatkan Semua Artikel (User)
-#### Endpoint
-`GET https://www.recythingtech.my.id/api/v1/articles`
-
-### Authorization
-- Bearer token user.
-
----
-
+## Introduction
+Recything API is a backend service designed to facilitate user interactions for waste management and reporting systems. This API supports features like user registration, reporting rubbish, and managing user points.
+
+## Features
+
+| Feature ID | Feature Name                     | Description                                                                                  | Endpoint                                    | Method | Auth Required |
+|------------|----------------------------------|----------------------------------------------------------------------------------------------|--------------------------------------------|--------|---------------|
+| 1          | Register                         | Register a new user with details such as name, email, and password.                          | `/api/v1/register`                         | POST   | No            |
+| 2          | Login Admin                      | Admin login using credentials.                                                              | `/api/v1/login`                            | POST   | No            |
+| 3          | Login User                       | User login using credentials.                                                               | `/api/v1/login`                            | POST   | No            |
+| 4          | Logout                           | Logout current session for user or admin.                                                   | `/api/v1/logout`                           | GET    | Yes           |
+| 5          | Update Photo                     | Update the profile photo for the user or admin.                                             | `/api/v1/user/photo/:iduser`                       | PUT    | Yes           |
+| 6          | Update User Data                 | Update user details such as email, phone, and password.                                      | `/api/v1/user/data/:iduser`                | PUT    | Yes           |
+| 7          | Get User Points                  | Retrieve points associated with a user.                                                     | `/api/v1/users/points`                     | GET    | Yes           |
+| 8          | Admin: Get All User Points       | Fetch points for all users.                                                                 | `/api/v1/admin/users/points`               | GET    | Yes           |
+| 9          | Admin: Deduct Points             | Reduce points for a user as part of a reward mechanism.                                     | `/api/v1/admin/users/points/deduct`        | POST   | Yes           |
+| 10         | Admin: Get All Users             | Retrieve all users in the system.                                                           | `/api/v1/admin/users`                      | GET    | Yes           |
+| 11         | Admin: Get User by ID            | Retrieve a specific user based on their ID.                                                 | `/api/v1/admin/users/:id`                  | GET    | Yes           |
+| 12         | User: Add Rubbish Report         | Report rubbish by providing location, description, and a photo.                             | `/api/v1/report-rubbish`                   | POST   | Yes           |
+| 13         | Admin: Get All Rubbish Reports   | Retrieve all rubbish reports with pagination options.                                       | `/api/v1/admin/report-rubbish`             | GET    | Yes           |
+| 14         | Admin: Filter Rubbish Reports    | Filter rubbish reports by status or sorting.                                                | `/api/v1/admin/report-rubbish`             | GET    | Yes           |
+| 15         | Admin: Get Report by ID          | Retrieve specific rubbish report details.                                                   | `/api/v1/admin/report-rubbish/:id`         | GET    | Yes           |
+| 16         | Admin: Delete Report             | Delete a specific rubbish report by ID.                                                     | `/api/v1/admin/report-rubbish/:id`         | DELETE | Yes           |
+| 17         | Admin: Get Latest Reports        | Retrieve the latest 10 rubbish reports.                                                     | `/api/v1/admin/latest-report`              | GET    | Yes           |
+| 18         | Admin: Update Report Status      | Change the status of a report (e.g., approved, rejected, completed).                        | `/api/v1/report-rubbish/:idreport`         | PUT    | Yes           |
+| 19         | Admin: Add Article               | Publish a new article with content, author, and multimedia links.                           | `/api/v1/admin/articles`                   | POST   | Yes           |
+| 20         | Admin: Update Article            | Modify an existing article's details.                                                       | `/api/v1/admin/articles/:id`               | PUT    | Yes           |
+| 21         | Admin: Delete Article            | Remove an article by its ID.                                                                | `/api/v1/admin/article/:id`                | DELETE | Yes           |
+| 22         | User: Get All Articles           | Retrieve all articles available.                                                            | `/api/v1/articles`                         | GET    | Yes           |
+| 23         | User: Get Article by ID          | Fetch a specific article by its ID.                                                         | `/api/v1/articles/:id`                     | GET    | Yes           |
+| 24         | User: Get Rubbish Report History | Retrieve the history of rubbish reports made by the user.                                   | `/api/v1/report-rubbish/history`           | GET    | Yes           |
+| 25         | Admin: Statistics                | View statistics related to rubbish reports.                                                 | `/api/v1/admin/reports/statistics`         | GET    | Yes           |
+| 26         | Admin: Add Reward                | Add a reward to the user for specific achievements.                                         | `/api/v1/admin/users/reward`               | POST   | Yes           |
+
+## Authentication
+Certain endpoints require a Bearer token for authentication. Tokens are issued upon successful login and should be included in the `Authorization` header.
+
+## Getting Started
+1. Clone this repository.
+2. Navigate to the project directory.
+3. Run the following command to install dependencies:
+   ```bash
+   go mod tidy
+   ```
+4. Start the application using:
+   ```bash
+   go run main.go
+   ```
+5. Follow the API endpoints and authentication process to integrate.
+
+## Additional Resources
+- [DOC API](https://docs.google.com/document/d/1aPhS0367yXb4oL2Oa8R_vQZX5aUaIab7JDRtRYaVNNY/edit?usp=sharing) for testing.
