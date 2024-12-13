@@ -74,7 +74,7 @@ func AmbilSemuaArtikel(c echo.Context) error {
 
 	// Default nilai untuk paginasi
 	page := 1
-	limit := 10
+	limit := 6
 
 	// Parse parameter jika ada
 	if pageParam != "" {
