@@ -187,6 +187,11 @@ func RegisterHandler(c echo.Context) error {
 	}
 
 	// Simpan ke database
+	if config.DB == nil {
+		response := helper.APIResponse("Database not initialized", http.StatusInternalServerError, "error", nil)
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+
 	result := config.DB.Create(&user)
 	if result.Error != nil {
 		response := helper.APIResponse("Failed to register", http.StatusInternalServerError, "error", nil)
